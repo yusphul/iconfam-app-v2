@@ -57,3 +57,26 @@ Then deploy. The service-role key is intentionally not required by the current b
 7. Admin approves finding and releases report.
 8. Client can see approved report metadata on dashboard.
 9. `/api/health` returns `{ ok: true }`.
+
+## v2 visual + portal update
+This build now uses image assets cropped from the approved iConfam design reference so the deployed landing page matches the approved navy/gold composition much more closely: hero photography, service imagery, project imagery, CTA imagery and logo treatment.
+
+### Portal URLs
+- Client / universal sign-in: `/auth`
+- Client self-registration: `/auth?mode=signup`
+- Admin sign-in: `/auth?portal=admin`
+- Field agent / professional sign-in: `/auth?portal=staff`
+- Client workspace: `/dashboard`
+- Field agent workspace: `/field`
+- Professional workspace: `/professional`
+- Admin workspace: `/admin`
+
+All staff use the same secure authentication form. After authentication the profile role controls the destination; typing an admin URL does not grant admin access.
+
+### Required Vercel environment variables
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`.
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only and is used by the authenticated admin invitation endpoint. Never expose it in browser code or prefix it with `NEXT_PUBLIC_`.
+
+### Staff onboarding
+Admins can invite Field Agents, Professionals and other Admins from the Admin dashboard. Clients remain the only role that can self-register.
