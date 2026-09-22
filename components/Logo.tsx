@@ -1,2 +1,2 @@
 import Image from 'next/image';
-export default function Logo(){return <Image className="logoImg" src="/logo-ref.png" width={142} height={47} alt="iConfam" priority/>}
+export default function Logo(){return <Image className="logoImg" src="/iconfam-logo.svg" width={228} height={70} alt="iConfam" priority/>}
