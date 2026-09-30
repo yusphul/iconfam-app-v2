@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+body {
+  background-color: #fbfcfd;
+  color: #101828;
+}
+
+/* One orchestrated load sequence for the role-gateway hero: the contour grid draws
+   in first, then the wordmark, then the headline and CTAs stagger in. */
+@keyframes drawGrid {
+  from { stroke-dashoffset: 1400; opacity: 0; }
+  to { stroke-dashoffset: 0; opacity: 0.6; }
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gateway-grid {
+  stroke-dasharray: 1400;
+  animation: drawGrid 1.8s ease-out forwards;
+}
+.gateway-rise {
+  opacity: 0;
+  animation: riseIn 0.6s ease-out forwards;
+}
+
+/* Radar-ping decoration behind the Sign in section — three rings expanding and
+   fading on a staggered loop, evoking a location being confirmed. Pure CSS,
+   no image assets, so it adds negligible weight to the page. */
+/* Testimonials marquee — the track is the testimonial cards rendered twice;
+   translating by -50% moves exactly one full set, so the loop is seamless. */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes pingRing {
+  0% { transform: scale(0.5); opacity: 0.7; }
+  70% { opacity: 0; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.ping-ring {
+  animation: pingRing 3.15s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Page transition — every route remounts through src/app/template.tsx (not
+   layout.tsx, which persists across navigation and would never re-trigger
+   this), so every navigation gets a quick fade + rise instead of an abrupt
+   cut. Deliberately fast (0.35s) so it reads as "responsive," not "slow." */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-fade-in {
+  animation: pageFadeIn 0.35s ease-out both;
+}
+
+/* Scroll-triggered reveal for sections below the fold — toggled by the <Reveal>
+   client component via IntersectionObserver, not on page load. */
+.reveal-section {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.reveal-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggers the "How it works" cards so they cascade in one after another
+   rather than all appearing at once — the parent .reveal-section still
+   triggers on a single IntersectionObserver hit, but each card's own
+   transition-delay staggers when it actually animates.
+   Deliberately only setting transition-delay here, not a full `transition:`
+   shorthand — each card already has Tailwind's `transition-all duration-300`
+   for its hover effects (lift, shadow, border), and overriding the shorthand
+   here would silently replace that with "only animate opacity/transform,"
+   breaking the hover transition the moment the card becomes visible. */
+.how-card {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.reveal-section.is-visible .how-card {
+  opacity: 1;
+  transform: translateY(0);
+}
+.how-item:nth-child(1) .how-card { transition-delay: 0ms; }
+.how-item:nth-child(2) .how-card { transition-delay: 110ms; }
+.how-item:nth-child(3) .how-card { transition-delay: 220ms; }
+.how-item:nth-child(4) .how-card { transition-delay: 330ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .gateway-grid { animation: none; opacity: 0.5; stroke-dashoffset: 0; }
+  .gateway-rise { animation: none; opacity: 1; transform: none; }
+  .reveal-section { opacity: 1; transform: none; transition: none; }
+  .how-card { opacity: 1; transform: none; }
+  .page-fade-in { animation: none; }
+  .ping-ring { animation: none; opacity: 0.15; }
+  .marquee-track { animation: none; }
+}

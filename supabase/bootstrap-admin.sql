@@ -1,5 +1,0 @@
--- AFTER you sign up once with your own email, promote only that trusted account manually:
--- update public.profiles set role='admin' where id=(select id from auth.users where email='YOUR_ADMIN_EMAIL');
--- Staff should be created/invited deliberately, then promoted by an admin/service process:
--- update public.profiles set role='field_agent' where id=(select id from auth.users where email='AGENT_EMAIL');
--- update public.profiles set role='professional' where id=(select id from auth.users where email='PROFESSIONAL_EMAIL');
