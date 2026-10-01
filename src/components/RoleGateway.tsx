@@ -550,7 +550,7 @@ export default function RoleGateway() {
                   className="inline-flex w-fit rounded-full border border-blueprintLine bg-white px-5 py-2.5 text-sm font-medium text-chalk transition-colors duration-200 hover:border-survey"
                 />
                 <a
-                  href="https://wa.me/1XXXXXXXXXX"
+                  href="https://wa.me/12816704862"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex w-fit rounded-full border border-blueprintLine bg-white px-5 py-2.5 text-sm font-medium text-chalk transition-colors duration-200 hover:border-survey"
@@ -646,7 +646,7 @@ export default function RoleGateway() {
                 </li>
                 <li className="flex items-center gap-2">
                   <a
-                    href="https://wa.me/1XXXXXXXXXX"
+                    href="https://wa.me/12816704862"
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-2 transition-colors duration-200 hover:text-survey"
