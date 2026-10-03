@@ -293,35 +293,6 @@ export default function RoleGateway() {
               ))}
             </div>
           </div>
-
-          <div
-            className="gateway-rise absolute bottom-8 right-6 hidden w-60 rounded-2xl bg-chalk/35 p-4 shadow-xl backdrop-blur-md sm:block md:right-10"
-            style={{ animationDelay: "500ms" }}
-          >
-            <p className="text-[10.5px] font-bold uppercase tracking-wider text-white/60">
-              Now covering
-            </p>
-            <div className="mt-2.5 space-y-2">
-              {["Lagos", "Abuja", "Port Harcourt"].map((city) => (
-                <div key={city} className="flex items-center gap-2.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/20 text-white">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path
-                        d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="12" cy="9.5" r="2.2" />
-                    </svg>
-                  </span>
-                  <span className="text-[12.5px] font-semibold text-white">{city}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 border-t border-white/15 pt-2.5 text-[10.5px] text-white/60">
-              More states coming soon
-            </p>
-          </div>
         </div>
       </section>
 
