@@ -27,6 +27,10 @@ Portal from `iConfam-Application-Spec.md`. Built with Next.js (App Router), Supa
      milestones, and privilege/visibility fixes (see "Roles and who sees what" below).
      **Deploy order:** run this in the SQL editor first, then push the matching app
      code — the new app and the new schema depend on each other.
+   - `supabase/migrations/0006_case_recommendations.sql` — iConfam's recommendation /
+     summary for each case (a verdict, a plain-language summary and next steps). It is
+     a draft until an admin publishes it; clients only ever see published ones, and
+     professionals and field agents never see them. Run after 0005, then push the code.
 3. In Project Settings → API, copy the **Project URL**, **anon public key**, and
    **service_role key**.
 4. Create your own first admin account:
@@ -144,6 +148,13 @@ model (Section 11):**
   document starts as *Awaiting review*. The admin approves it (choosing whether to
   share with the client, the case team, or both), or rejects it with a note that is
   sent back to the submitter. The Review Queue shows everything waiting.
+- **Recommendation and PDF report:** on each case the admin writes a verdict
+  (Proceed / Proceed with caution / Do not proceed / Inconclusive), a summary and
+  next steps, and publishes it when ready. The client sees it at the top of the case,
+  can fold the "Steps & reports" section and each step, and can download a standard
+  PDF report (cover, case details, recommendation, steps table, findings with photos,
+  documents, notice). The PDF is built in the browser from what the client can already
+  see, so it can never contain more than the page does.
 - **Assigning professionals:** from the case page, pick a specialty, then a person;
   a case can have several (e.g. a lawyer and a surveyor).
 - **Status colours** are the same for every role: grey = not started, indigo = scoped,

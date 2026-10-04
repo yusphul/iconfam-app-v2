@@ -131,7 +131,7 @@ export default function AdminDashboard() {
         {COLUMNS.map((status) => (
           <div
             key={status}
-            className={`rounded-lg border border-t-4 border-line bg-white ${statusStyle("case", status).accent}`}
+            className={`rounded-lg border border-t-4 border-line bg-white ${statusStyle("case", status).accentTop}`}
           >
             <div className="border-b border-line px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
               {CASE_STATUS_LABELS[status]}

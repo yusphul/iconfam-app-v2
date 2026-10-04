@@ -29,6 +29,7 @@ import { detectContactInfo } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import ReviewControls from "@/components/ReviewControls";
+import RecommendationEditor from "@/components/RecommendationEditor";
 import MessageThread from "@/components/MessageThread";
 
 export default function AdminCaseDetail() {
@@ -504,6 +505,11 @@ export default function AdminCaseDetail() {
                 Add
               </button>
             </div>
+          </Section>
+
+          {/* iConfam's recommendation: a draft until published to the client */}
+          <Section title="Recommendation (client-facing)">
+            <RecommendationEditor caseId={id} />
           </Section>
 
           {/* Messages: one private thread per participant */}

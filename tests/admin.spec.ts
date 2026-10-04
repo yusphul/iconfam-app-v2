@@ -71,6 +71,21 @@ test.describe("Admin", () => {
     await expect(page.getByPlaceholder("Never shown to the client.")).toHaveValue(noteText);
   });
 
+  test("recommendation editor shows the published recommendation and guards empty saves", async ({
+    page,
+  }) => {
+    const seed = loadSeed();
+    await page.goto(`/admin/cases/${seed.caseId}`);
+    await expect(page.getByText("Published to client")).toBeVisible();
+    await expect(page.getByLabel(/^Summary/)).toHaveValue(/E2E recommendation summary/);
+    // Nothing changed, so there is nothing to save.
+    await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    // Pulling it back to draft needs no edits, but a blank summary is refused.
+    await page.getByLabel(/^Summary/).fill("   ");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Write a short summary")).toBeVisible();
+  });
+
   test("can log a payment and mark it paid", async ({ page }) => {
     const seed = loadSeed();
     await page.goto(`/admin/cases/${seed.caseId}`);

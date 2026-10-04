@@ -3,6 +3,7 @@ import type {
   MilestoneStatus,
   PaymentStatus,
   ReportStatusFlag,
+  RecommendationVerdict,
   ReviewState,
 } from "@/lib/types";
 import {
@@ -11,6 +12,7 @@ import {
   PAYMENT_STATUS_LABELS,
   REPORT_FLAG_LABELS,
   REVIEW_STATE_LABELS,
+  VERDICT_LABELS,
 } from "@/lib/types";
 
 // One colour language for every status in the app, shared by the client,
@@ -36,7 +38,8 @@ export interface Tone {
   badge: string; // pill: background + text + border
   dot: string; // the small leading dot
   bar: string; // solid fill, e.g. timeline segments
-  accent: string; // left/top border colour for cards and columns
+  accent: string; // LEFT border colour only (pair with border-l-4)
+  accentTop: string; // TOP border colour only (pair with border-t-4)
 }
 
 const TONES = {
@@ -44,54 +47,69 @@ const TONES = {
     badge: "border-slate-300 bg-slate-100 text-slate-700",
     dot: "bg-slate-400",
     bar: "bg-slate-300",
-    accent: "border-slate-300",
+    accent: "border-l-slate-300",
+    accentTop: "border-t-slate-300",
   },
   indigo: {
     badge: "border-indigo-300 bg-indigo-50 text-indigo-700",
     dot: "bg-indigo-500",
     bar: "bg-indigo-400",
-    accent: "border-indigo-400",
+    accent: "border-l-indigo-400",
+    accentTop: "border-t-indigo-400",
   },
   blue: {
     badge: "border-blue-300 bg-blue-50 text-blue-700",
     dot: "bg-blue-500",
     bar: "bg-blue-500",
-    accent: "border-blue-500",
+    accent: "border-l-blue-500",
+    accentTop: "border-t-blue-500",
   },
   amber: {
     badge: "border-amber-300 bg-amber-50 text-amber-800",
     dot: "bg-amber-500",
     bar: "bg-amber-400",
-    accent: "border-amber-400",
+    accent: "border-l-amber-400",
+    accentTop: "border-t-amber-400",
   },
   green: {
     badge: "border-emerald-300 bg-emerald-50 text-emerald-700",
     dot: "bg-emerald-500",
     bar: "bg-emerald-500",
-    accent: "border-emerald-500",
+    accent: "border-l-emerald-500",
+    accentTop: "border-t-emerald-500",
   },
   violet: {
     badge: "border-violet-300 bg-violet-50 text-violet-700",
     dot: "bg-violet-500",
     bar: "bg-violet-400",
-    accent: "border-violet-400",
+    accent: "border-l-violet-400",
+    accentTop: "border-t-violet-400",
   },
   red: {
     badge: "border-red-300 bg-red-50 text-red-700",
     dot: "bg-red-500",
     bar: "bg-red-500",
-    accent: "border-red-500",
+    accent: "border-l-red-500",
+    accentTop: "border-t-red-500",
   },
   // The one status that should be impossible to miss.
   redSolid: {
     badge: "border-red-700 bg-red-600 text-white",
     dot: "bg-white",
     bar: "bg-red-600",
-    accent: "border-red-600",
+    accent: "border-l-red-600",
+    accentTop: "border-t-red-600",
   },
 } satisfies Record<string, Tone>;
 
-export type StatusKind = "case" | "milestone" | "report" | "review" | "payment";
+export type StatusKind = "case" | "milestone" | "report" | "review" | "payment" | "verdict";
+
+const VERDICT_TONE: Record<RecommendationVerdict, Tone> = {
+  proceed: TONES.green,
+  proceed_with_caution: TONES.amber,
+  do_not_proceed: TONES.redSolid,
+  inconclusive: TONES.grey,
+};
 
 const CASE_TONE: Record<CaseStatus, Tone> = {
   intake: TONES.grey,
@@ -151,6 +169,11 @@ export function statusStyle(kind: StatusKind, value: string): Tone & { label: st
       return {
         ...(REVIEW_TONE[value as ReviewState] ?? TONES.grey),
         label: REVIEW_STATE_LABELS[value as ReviewState] ?? value,
+      };
+    case "verdict":
+      return {
+        ...(VERDICT_TONE[value as RecommendationVerdict] ?? TONES.grey),
+        label: VERDICT_LABELS[value as RecommendationVerdict] ?? value,
       };
     case "payment":
       return {

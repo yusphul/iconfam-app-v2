@@ -108,6 +108,18 @@ export default async function globalSetup() {
     throw new Error(`Failed to create seed milestones: ${milestoneError?.message}`);
   }
 
+  // A published recommendation, so the client case page always has one to show.
+  const { error: recError } = await admin.from("case_recommendations").insert({
+    case_id: testCase.id,
+    verdict: "proceed_with_caution",
+    summary: "E2E recommendation summary: the file checks out, but confirm the boundaries.",
+    next_steps: "1. Confirm the boundaries with a surveyor.",
+    published: true,
+  });
+  if (recError) {
+    throw new Error(`Failed to create seed recommendation: ${recError.message}`);
+  }
+
   // Persist everything the specs need so they don't have to re-derive IDs.
   writeFileSync(
     SEED_FILE,

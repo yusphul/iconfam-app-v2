@@ -27,6 +27,49 @@ test.describe("Client", () => {
     await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
   });
 
+  test("Case Detail shows iConfam's published recommendation", async ({ page }) => {
+    const seed = loadSeed();
+    await page.goto(`/portal/cases/${seed.caseId}`);
+    await expect(page.getByRole("heading", { name: "Our recommendation" })).toBeVisible();
+    await expect(page.getByText("Proceed with caution", { exact: true })).toBeVisible();
+    await expect(page.getByText(/E2E recommendation summary/)).toBeVisible();
+    await expect(page.getByText("1. Confirm the boundaries with a surveyor.")).toBeVisible();
+  });
+
+  test("Steps & reports can be folded away and each step unfolded", async ({ page }) => {
+    const seed = loadSeed();
+    await page.goto(`/portal/cases/${seed.caseId}`);
+
+    const stepsToggle = page.getByRole("button", { name: /Steps & reports/ });
+    await expect(stepsToggle).toHaveAttribute("aria-expanded", "true");
+
+    // Steps start folded: the pending step's empty-state text is hidden.
+    const emptyText = page.getByText("No report yet for this step");
+    await expect(emptyText).toHaveCount(0);
+    await page.getByRole("button", { name: /Confirm processing status/ }).click();
+    await expect(emptyText).toBeVisible();
+
+    // "Collapse all" folds every step again.
+    await page.getByRole("button", { name: /Expand all|Collapse all/ }).click();
+    await page.getByRole("button", { name: /Collapse all/ }).click();
+    await expect(emptyText).toHaveCount(0);
+
+    // Folding the whole section hides the steps themselves.
+    await stepsToggle.click();
+    await expect(stepsToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("button", { name: /Confirm processing status/ })).toHaveCount(0);
+  });
+
+  test("client can download the case report as a PDF", async ({ page }) => {
+    const seed = loadSeed();
+    await page.goto(`/portal/cases/${seed.caseId}`);
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Download report (PDF)" }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/^iConfam-Report-IC-[0-9A-F]{8}\.pdf$/);
+  });
+
   test("Case Detail has Documents and Payments sections, empty-state or not", async ({ page }) => {
     const seed = loadSeed();
     await page.goto(`/portal/cases/${seed.caseId}`);

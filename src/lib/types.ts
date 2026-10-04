@@ -13,6 +13,12 @@ export type ProfessionalSpecialty =
 
 export type ReviewState = "pending" | "approved" | "rejected";
 
+export type RecommendationVerdict =
+  | "proceed"
+  | "proceed_with_caution"
+  | "do_not_proceed"
+  | "inconclusive";
+
 export type CaseType =
   | "property_purchase"
   | "ground_up_build"
@@ -70,6 +76,18 @@ export interface CaseProfessional {
   case_id: string;
   professional_id: string;
   assigned_at: string;
+}
+
+// iConfam's own recommendation / summary for a case, written by the admin.
+// Clients only ever receive it once `published` is true.
+export interface CaseRecommendation {
+  case_id: string;
+  verdict: RecommendationVerdict;
+  summary: string;
+  next_steps: string | null;
+  published: boolean;
+  published_at: string | null;
+  updated_at: string;
 }
 
 export interface Milestone {
@@ -199,6 +217,13 @@ export const REVIEW_STATE_LABELS: Record<ReviewState, string> = {
   pending: "Awaiting review",
   approved: "Approved",
   rejected: "Rejected",
+};
+
+export const VERDICT_LABELS: Record<RecommendationVerdict, string> = {
+  proceed: "Proceed",
+  proceed_with_caution: "Proceed with caution",
+  do_not_proceed: "Do not proceed",
+  inconclusive: "Inconclusive — more checks needed",
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
