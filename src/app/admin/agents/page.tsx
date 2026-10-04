@@ -2,24 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { AppUser, Case, UserRole } from "@/lib/types";
-import { CASE_TYPE_LABELS } from "@/lib/types";
-import Badge from "@/components/Badge";
+import type { AppUser, Case, CaseProfessional, ProfessionalSpecialty, UserRole } from "@/lib/types";
+import { CASE_TYPE_LABELS, SPECIALTY_LABELS, roleLabel } from "@/lib/types";
+import { LABEL_CHIP } from "@/lib/statusStyles";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function AgentsDirectoryPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
+  const [links, setLinks] = useState<CaseProfessional[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
-    const [{ data: u }, { data: c }] = await Promise.all([
+    const [{ data: u }, { data: c }, { data: cp }] = await Promise.all([
       supabase.from("users").select("*").order("full_name"),
       supabase.from("cases").select("*"),
+      supabase.from("case_professionals").select("*"),
     ]);
     setUsers((u as AppUser[]) ?? []);
     setCases((c as Case[]) ?? []);
+    setLinks((cp as CaseProfessional[]) ?? []);
     setLoading(false);
+  }
+
+  async function setSpecialty(userId: string, specialty: string) {
+    setError(null);
+    const { error: err } = await supabase
+      .from("users")
+      .update({ specialty: specialty || null })
+      .eq("id", userId);
+    if (err) setError(err.message);
+    load();
   }
 
   useEffect(() => {
@@ -41,14 +56,22 @@ export default function AgentsDirectoryPage() {
       </div>
 
       {showInvite && <InviteForm onCreated={load} />}
+      {error && (
+        <p role="alert" className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
 
       {loading ? (
         <p className="text-sm text-neutral-500">Loading…</p>
       ) : (
         <div className="space-y-4">
           {fieldPeople.map((person) => {
+            const proCaseIds = new Set(
+              links.filter((l) => l.professional_id === person.id).map((l) => l.case_id)
+            );
             const assignedCases = cases.filter(
-              (c) => c.assigned_agent_id === person.id || c.assigned_professional_id === person.id
+              (c) => c.assigned_agent_id === person.id || proCaseIds.has(c.id)
             );
             // Anti-collusion signal: flag if this person has been assigned to the
             // same location/description more than once — a manual review nudge,
@@ -63,14 +86,36 @@ export default function AgentsDirectoryPage() {
                 <div className="mb-2 flex items-center justify-between">
                   <div>
                     <span className="font-semibold text-navy">{person.full_name}</span>
-                    <Badge className="ml-2 border-line text-neutral-600">{person.role}</Badge>
+                    <span className={`ml-2 ${LABEL_CHIP}`}>{roleLabel(person)}</span>
                     {person.region && (
                       <span className="ml-2 text-xs text-neutral-400">{person.region}</span>
                     )}
+                    {!person.active && (
+                      <span className="ml-2">
+                        <StatusBadge kind="case" value="on_hold" label="Inactive" />
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs text-neutral-400">
-                    {assignedCases.length} case{assignedCases.length === 1 ? "" : "s"} assigned
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {person.role === "professional" && (
+                      <select
+                        aria-label={`Specialty of ${person.full_name}`}
+                        value={person.specialty ?? ""}
+                        onChange={(e) => setSpecialty(person.id, e.target.value)}
+                        className="rounded border border-line bg-paper px-2 py-1 text-xs"
+                      >
+                        <option value="">No specialty set</option>
+                        {Object.entries(SPECIALTY_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <span className="text-xs text-neutral-400">
+                      {assignedCases.length} case{assignedCases.length === 1 ? "" : "s"} assigned
+                    </span>
+                  </div>
                 </div>
                 {repeatLocations.length > 0 && (
                   <p className="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-700">
@@ -108,6 +153,7 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
   const [whatsapp, setWhatsapp] = useState("");
   const [role, setRole] = useState<UserRole>("agent");
   const [region, setRegion] = useState("");
+  const [specialty, setSpecialty] = useState<ProfessionalSpecialty | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -129,6 +175,7 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
         whatsapp_number: whatsapp || null,
         role,
         region: region || null,
+        specialty: role === "professional" ? specialty : null,
       }),
     });
     const json = await res.json();
@@ -138,6 +185,7 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
       return;
     }
     setSuccess(true);
+    setSpecialty("");
     setFullName("");
     setEmail("");
     setWhatsapp("");
@@ -178,9 +226,25 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
           className="rounded border border-line bg-paper px-3 py-2 text-sm"
         >
           <option value="agent">Field agent</option>
-          <option value="professional">Professional (lawyer/surveyor/architect)</option>
+          <option value="professional">Professional</option>
           <option value="client">Client</option>
         </select>
+        {role === "professional" && (
+          <select
+            required
+            aria-label="Specialty"
+            value={specialty}
+            onChange={(e) => setSpecialty(e.target.value as ProfessionalSpecialty | "")}
+            className="rounded border border-line bg-paper px-3 py-2 text-sm"
+          >
+            <option value="">Specialty (lawyer, surveyor, …)</option>
+            {Object.entries(SPECIALTY_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           placeholder="Region (e.g. Lagos)"
           value={region}

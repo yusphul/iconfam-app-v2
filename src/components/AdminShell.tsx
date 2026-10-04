@@ -1,14 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/AuthProvider";
+import { supabase } from "@/lib/supabaseClient";
 import Logo from "@/components/Logo";
 
 const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/cases", label: "All Cases" },
-  { href: "/admin/reports", label: "Reports Queue" },
+  { href: "/admin/reports", label: "Review Queue" },
   { href: "/admin/agents", label: "Agents & Professionals" },
   { href: "/admin/payments", label: "Payments" },
 ];
@@ -16,15 +18,39 @@ const NAV = [
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  const [pending, setPending] = useState(0);
+
+  // Count of reports + documents waiting for the admin's approval, shown on
+  // the Review Queue tab. Refreshed whenever the admin moves between pages.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPending() {
+      const [{ count: r }, { count: d }] = await Promise.all([
+        supabase
+          .from("reports")
+          .select("*", { count: "exact", head: true })
+          .eq("review_status", "pending"),
+        supabase
+          .from("documents")
+          .select("*", { count: "exact", head: true })
+          .eq("review_status", "pending"),
+      ]);
+      if (!cancelled) setPending((r ?? 0) + (d ?? 0));
+    }
+    loadPending();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-paper font-body">
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
+          <Link href="/admin" className="flex items-center gap-2" aria-label="iConfam admin home">
             <Logo height={26} />
             <span className="text-xs uppercase tracking-wide text-neutral-400">Admin</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-neutral-500">{profile?.full_name}</span>
             <button onClick={signOut} className="text-stamp hover:underline">
@@ -32,20 +58,28 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 px-6">
+        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-6">
           {NAV.map((item) => {
-            const active = pathname === item.href;
+            // Highlight a section for its sub-pages too (e.g. a case detail
+            // keeps "All Cases" lit), but keep Dashboard exact.
+            const active =
+              item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`border-b-2 px-3 py-2 text-sm font-medium transition ${
+                className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition ${
                   active
                     ? "border-stamp text-stamp"
                     : "border-transparent text-neutral-500 hover:text-navy"
                 }`}
               >
                 {item.label}
+                {item.href === "/admin/reports" && pending > 0 && (
+                  <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                    {pending}
+                  </span>
+                )}
               </Link>
             );
           })}

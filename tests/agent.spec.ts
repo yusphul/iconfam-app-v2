@@ -40,7 +40,7 @@ test.describe("Field agent", () => {
       timeout: 10000,
     });
     await page.getByRole("button", { name: "Back to my cases" }).click();
-    await expect(page).toHaveURL(/\/agent$/);
+    await expect(page).toHaveURL(/\/agent\/cases\//);
   });
 });
 

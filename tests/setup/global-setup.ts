@@ -61,6 +61,8 @@ export default async function globalSetup() {
         full_name: u.full_name,
         role: u.role,
         region: "Lagos",
+        // Professionals are a specific kind; the seeded one is a lawyer.
+        specialty: u.role === "professional" ? "lawyer" : null,
       },
     });
     if (error || !created?.user) {
@@ -78,7 +80,6 @@ export default async function globalSetup() {
       case_type: "status_verification",
       client_id: userIds.client,
       assigned_agent_id: userIds.agent,
-      assigned_professional_id: userIds.professional,
       status: "in_progress",
       location_description: "Seeded by Playwright global setup",
     })
@@ -86,6 +87,14 @@ export default async function globalSetup() {
     .single();
   if (caseError || !testCase) {
     throw new Error(`Failed to create seed case: ${caseError?.message}`);
+  }
+
+  // Professionals are linked through case_professionals (a case can have several).
+  const { error: linkError } = await admin
+    .from("case_professionals")
+    .insert({ case_id: testCase.id, professional_id: userIds.professional });
+  if (linkError) {
+    throw new Error(`Failed to assign seed professional: ${linkError.message}`);
   }
 
   const { data: milestones, error: milestoneError } = await admin

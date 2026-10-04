@@ -35,7 +35,7 @@ test.describe("Admin", () => {
 
     const milestoneName = `Playwright milestone ${Date.now()}`;
     await page.getByPlaceholder("e.g. Title & registry status check").fill(milestoneName);
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText(milestoneName)).toBeVisible();
 
     // Find the row for the milestone we just added and confirm its status.
@@ -86,11 +86,11 @@ test.describe("Admin", () => {
     await expect(row.getByText("Paid")).toBeVisible();
   });
 
-  test("Reports Queue is reachable and the invite form on Agents & Professionals renders", async ({
+  test("Review Queue is reachable and the invite form on Agents & Professionals renders", async ({
     page,
   }) => {
     await page.goto("/admin/reports");
-    await expect(page.getByRole("heading", { name: "Reports Queue" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Review Queue" })).toBeVisible();
 
     await page.goto("/admin/agents");
     await expect(page.getByRole("heading", { name: "Agents & Professionals" })).toBeVisible();

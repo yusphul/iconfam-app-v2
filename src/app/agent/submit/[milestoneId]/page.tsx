@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
 import type { Milestone, ReportStatusFlag } from "@/lib/types";
 import { REPORT_FLAG_LABELS } from "@/lib/types";
+import BackLink from "@/components/BackLink";
 
 export default function SubmitReportPage() {
   const { milestoneId } = useParams<{ milestoneId: string }>();
@@ -117,7 +118,13 @@ export default function SubmitReportPage() {
       }
     }
 
-    await supabase.from("milestones").update({ status: "in_progress" }).eq("id", milestone.id);
+    // Best effort: mark the step as started. The database only lets field staff
+    // move a milestone to pending/in progress; confirming is the admin's call.
+    const { error: statusError } = await supabase
+      .from("milestones")
+      .update({ status: "in_progress" })
+      .eq("id", milestone.id);
+    if (statusError) console.warn("Could not update milestone status:", statusError.message);
 
     setSubmitting(false);
     setDone(true);
@@ -129,7 +136,7 @@ export default function SubmitReportPage() {
         <p className="mb-4 text-verified">Report submitted — an admin will review it before it's
           shown to the client.</p>
         <button
-          onClick={() => router.replace("/agent")}
+          onClick={() => router.replace(milestone ? `/agent/cases/${milestone.case_id}` : "/agent")}
           className="rounded bg-navy px-4 py-2 text-sm font-medium text-white"
         >
           Back to my cases
@@ -142,6 +149,7 @@ export default function SubmitReportPage() {
 
   return (
     <div>
+      <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>
       <h1 className="mb-1 font-display text-xl font-bold text-navy">Submit Report</h1>
       <p className="mb-6 text-sm text-neutral-500">Milestone: {milestone.name}</p>
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import type { Case, CaseStatus, CaseType } from "@/lib/types";
 import { CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "@/lib/types";
-import Badge from "@/components/Badge";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function AllCasesPage() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -100,9 +100,7 @@ export default function AllCasesPage() {
                   </td>
                   <td className="px-3 py-2">{CASE_TYPE_LABELS[c.case_type]}</td>
                   <td className="px-3 py-2">
-                    <Badge className="border-line text-neutral-600">
-                      {CASE_STATUS_LABELS[c.status]}
-                    </Badge>
+                    <StatusBadge kind="case" value={c.status} />
                   </td>
                   <td className="px-3 py-2 text-neutral-500">
                     {new Date(c.created_at).toLocaleDateString()}

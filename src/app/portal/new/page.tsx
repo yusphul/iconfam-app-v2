@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
 import type { CaseType } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
+import BackLink from "@/components/BackLink";
 
 export default function RequestVerificationPage() {
   const { profile } = useAuth();
@@ -45,6 +46,7 @@ export default function RequestVerificationPage() {
 
   return (
     <div className="mx-auto max-w-xl">
+      <BackLink href="/portal">My cases</BackLink>
       <h1 className="mb-1 font-display text-xl font-bold text-navy">Request verification</h1>
       <p className="mb-6 text-sm text-neutral-500">
         Tell us what you need checked. We&apos;ll follow up with the specifics and a

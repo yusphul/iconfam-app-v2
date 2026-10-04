@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import type { Payment, Case } from "@/lib/types";
-import Badge from "@/components/Badge";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function PaymentsOverviewPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -73,18 +73,10 @@ export default function PaymentsOverviewPage() {
                   {p.currency} {p.amount}
                 </td>
                 <td className="px-3 py-2">
-                  <Badge
-                    className={
-                      p.status === "paid"
-                        ? "border-verified/30 bg-verified/10 text-verified"
-                        : "border-amber-300 bg-amber-50 text-amber-700"
-                    }
-                  >
-                    {p.status}
-                  </Badge>
+                  <StatusBadge kind="payment" value={p.status} />
                 </td>
                 <td className="px-3 py-2">
-                  {p.status !== "paid" && (
+                  {p.status !== "paid" && p.status !== "waived" && (
                     <button
                       onClick={() => markPaid(p.id)}
                       className="rounded bg-verified px-2 py-1 text-xs font-medium text-white"

@@ -1,5 +1,18 @@
 export type UserRole = "client" | "agent" | "professional" | "admin";
 
+export type ProfessionalSpecialty =
+  | "lawyer"
+  | "surveyor"
+  | "architect"
+  | "structural_engineer"
+  | "quantity_surveyor"
+  | "estate_valuer"
+  | "town_planner"
+  | "agronomist"
+  | "other";
+
+export type ReviewState = "pending" | "approved" | "rejected";
+
 export type CaseType =
   | "property_purchase"
   | "ground_up_build"
@@ -31,6 +44,7 @@ export interface AppUser {
   email: string | null;
   whatsapp_number: string | null;
   role: UserRole;
+  specialty: ProfessionalSpecialty | null;
   country: string | null;
   region: string | null;
   active: boolean;
@@ -45,10 +59,17 @@ export interface Case {
   title: string;
   location_description: string | null;
   assigned_agent_id: string | null;
-  assigned_professional_id: string | null;
-  internal_notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// A professional (lawyer, surveyor, ...) assigned to a case. A case can have
+// several — one row each.
+export interface CaseProfessional {
+  id: string;
+  case_id: string;
+  professional_id: string;
+  assigned_at: string;
 }
 
 export interface Milestone {
@@ -58,10 +79,26 @@ export interface Milestone {
   sequence_order: number;
   status: MilestoneStatus;
   due_date: string | null;
+  // Who added it, as a role label ("Lawyer", "iConfam team") — never a name.
+  created_by: string | null;
+  owner_label: string | null;
   created_at: string;
 }
 
-export interface Report {
+// Fields shared by anything that goes through the admin review gate (reports
+// and documents): nothing reaches another party until an admin approves it and
+// chooses who it is shared with.
+export interface Reviewable {
+  review_status: ReviewState;
+  review_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  share_with_client: boolean;
+  share_with_team: boolean;
+  author_label: string | null;
+}
+
+export interface Report extends Reviewable {
   id: string;
   milestone_id: string;
   submitted_by: string;
@@ -70,7 +107,6 @@ export interface Report {
   geo_lat: number | null;
   geo_lng: number | null;
   visit_time: string;
-  client_visible: boolean;
   created_at: string;
 }
 
@@ -82,7 +118,7 @@ export interface MediaItem {
   captured_at: string;
 }
 
-export interface DocumentRow {
+export interface DocumentRow extends Reviewable {
   id: string;
   case_id: string;
   doc_type: string;
@@ -108,6 +144,9 @@ export interface CaseMessage {
   id: string;
   case_id: string;
   sender_id: string;
+  // Whose private conversation with the admin team this belongs to — the
+  // client for the client thread, or the professional/agent for theirs.
+  thread_user_id: string;
   channel: string;
   body: string;
   sent_at: string;
@@ -127,13 +166,6 @@ export const REPORT_FLAG_LABELS: Record<ReportStatusFlag, string> = {
   escalation_needed: "Escalation Needed",
 };
 
-export const REPORT_FLAG_COLORS: Record<ReportStatusFlag, string> = {
-  confirmed_good: "bg-verified/10 text-verified border-verified/30",
-  confirmed_issue: "bg-stamp/10 text-stamp border-stamp/30",
-  unable_to_verify: "bg-amber-50 text-amber-700 border-amber-300",
-  escalation_needed: "bg-red-50 text-red-700 border-red-400",
-};
-
 export const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
   intake: "Intake",
   scoped: "Scoped",
@@ -150,3 +182,38 @@ export const MILESTONE_STATUS_LABELS: Record<MilestoneStatus, string> = {
   confirmed: "Confirmed",
   issue_found: "Issue Found",
 };
+
+export const SPECIALTY_LABELS: Record<ProfessionalSpecialty, string> = {
+  lawyer: "Lawyer",
+  surveyor: "Surveyor",
+  architect: "Architect",
+  structural_engineer: "Structural Engineer",
+  quantity_surveyor: "Quantity Surveyor",
+  estate_valuer: "Estate Valuer",
+  town_planner: "Town Planner",
+  agronomist: "Agronomist",
+  other: "Other specialist",
+};
+
+export const REVIEW_STATE_LABELS: Record<ReviewState, string> = {
+  pending: "Awaiting review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  pending: "Pending",
+  paid: "Paid",
+  overdue: "Overdue",
+  waived: "Waived",
+};
+
+/** What to call someone in the UI: "Lawyer", "Field agent", ... */
+export function roleLabel(u: Pick<AppUser, "role" | "specialty">): string {
+  if (u.role === "professional") {
+    return u.specialty ? SPECIALTY_LABELS[u.specialty] : "Professional";
+  }
+  if (u.role === "agent") return "Field agent";
+  if (u.role === "admin") return "Admin";
+  return "Client";
+}

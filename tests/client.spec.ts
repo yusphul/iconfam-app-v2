@@ -18,13 +18,13 @@ test.describe("Client", () => {
     const seed = loadSeed();
     await page.goto(`/portal/cases/${seed.caseId}`);
     await expect(page.getByRole("heading", { name: "E2E Test Case" })).toBeVisible();
-    await expect(page.getByText("Progress")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Progress" })).toBeVisible();
     // Regression check: this used to render the raw enum value ("confirmed")
     // rather than the proper label — both read the same for this particular
     // status, so the meaningful check is that "in_progress" (the raw form of
     // the second seeded milestone) never appears anywhere on the page.
     await expect(page.getByText("in_progress", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Confirmed")).toBeVisible();
+    await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
   });
 
   test("Case Detail has Documents and Payments sections, empty-state or not", async ({ page }) => {

@@ -45,11 +45,31 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, email, whatsapp_number, role, region, country } = body;
+  const { full_name, email, whatsapp_number, role, region, country, specialty } = body;
 
   if (!full_name || !email || !role) {
     return NextResponse.json(
       { error: "full_name, email, and role are required." },
+      { status: 400 }
+    );
+  }
+
+  // Professionals are invited as a specific kind (lawyer, surveyor, ...). The
+  // database enforces the same list; checking here gives a readable error.
+  const SPECIALTIES = [
+    "lawyer",
+    "surveyor",
+    "architect",
+    "structural_engineer",
+    "quantity_surveyor",
+    "estate_valuer",
+    "town_planner",
+    "agronomist",
+    "other",
+  ];
+  if (role === "professional" && !SPECIALTIES.includes(specialty)) {
+    return NextResponse.json(
+      { error: "Choose a specialty for this professional." },
       { status: 400 }
     );
   }
@@ -69,6 +89,7 @@ export async function POST(req: NextRequest) {
         role,
         region: region ?? null,
         country: country ?? null,
+        specialty: role === "professional" ? specialty : null,
       },
     }
   );

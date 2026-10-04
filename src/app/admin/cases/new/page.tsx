@@ -5,19 +5,18 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser, CaseType } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
+import BackLink from "@/components/BackLink";
 
 export default function NewCasePage() {
   const router = useRouter();
   const [clients, setClients] = useState<AppUser[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
-  const [professionals, setProfessionals] = useState<AppUser[]>([]);
 
   const [title, setTitle] = useState("");
   const [caseType, setCaseType] = useState<CaseType>("status_verification");
   const [clientId, setClientId] = useState("");
   const [location, setLocation] = useState("");
   const [agentId, setAgentId] = useState("");
-  const [professionalId, setProfessionalId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,8 +25,7 @@ export default function NewCasePage() {
       const { data: users } = await supabase.from("users").select("*").order("full_name");
       const all = (users as AppUser[]) ?? [];
       setClients(all.filter((u) => u.role === "client"));
-      setAgents(all.filter((u) => u.role === "agent"));
-      setProfessionals(all.filter((u) => u.role === "professional"));
+      setAgents(all.filter((u) => u.role === "agent" && u.active));
     }
     load();
   }, []);
@@ -48,7 +46,6 @@ export default function NewCasePage() {
         client_id: clientId,
         location_description: location || null,
         assigned_agent_id: agentId || null,
-        assigned_professional_id: professionalId || null,
         status: "intake",
       })
       .select()
@@ -63,6 +60,7 @@ export default function NewCasePage() {
 
   return (
     <div className="mx-auto max-w-xl">
+      <BackLink href="/admin/cases">All cases</BackLink>
       <h1 className="mb-6 font-display text-xl font-bold text-navy">New Case</h1>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-line bg-white p-6">
         <Field label="Title" id="case-title">
@@ -140,21 +138,10 @@ export default function NewCasePage() {
           </select>
         </Field>
 
-        <Field label="Assign professional (optional)" id="case-professional">
-          <select
-            id="case-professional"
-            value={professionalId}
-            onChange={(e) => setProfessionalId(e.target.value)}
-            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
-          >
-            <option value="">Unassigned</option>
-            {professionals.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name} {p.region ? `— ${p.region}` : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <p className="text-xs text-neutral-400">
+          Lawyers, surveyors, architects and other professionals are added from the case page
+          once it&apos;s created, by specialty.
+        </p>
 
         {error && <p className="text-sm text-stamp">{error}</p>}
 

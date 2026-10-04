@@ -18,6 +18,15 @@ Portal from `iConfam-Application-Spec.md`. Built with Next.js (App Router), Supa
      automatically creates a client's `public.users` profile row on signup. Required
      for the `/signup` page to work at all — without it, a self-signed-up account
      gets an auth login but no profile, and every page will fail to find them.
+   - `supabase/migrations/0004_contact_messages.sql` — stores landing-page contact
+     form submissions.
+   - `supabase/migrations/0005_specialties_review_gate_threads.sql` — professional
+     specialties (lawyer, surveyor, architect, …), several professionals per case,
+     the **admin review gate** for reports and documents, **private message threads**
+     (client ↔ admin, professional ↔ admin, agent ↔ admin), professionals adding
+     milestones, and privilege/visibility fixes (see "Roles and who sees what" below).
+     **Deploy order:** run this in the SQL editor first, then push the matching app
+     code — the new app and the new schema depend on each other.
 3. In Project Settings → API, copy the **Project URL**, **anon public key**, and
    **service_role key**.
 4. Create your own first admin account:
@@ -98,7 +107,7 @@ in the admin dashboard — no case exists until they've told you what they need.
   milestone-timeline analytics section), All Cases, Case Detail (milestones with a real
   status control, report approval gate, payments, documents, internal notes, messages),
   Agents & Professionals directory with invite flow and a same-relationship reassignment
-  warning, Payments overview, Reports queue.
+  warning, Payments overview, and the Review Queue for approving or rejecting reports and documents.
 - Agent/Professional portal: My Assigned Cases, Submit Report (camera capture,
   geolocation, blunt status flag, professional-only document upload).
 - Client portal: My Cases (with a "+ Request verification" entry point), Case Detail
@@ -120,6 +129,26 @@ model (Section 11):**
   approval from Meta first (start that application early — it can take days to weeks).
 - AI-assisted computer-vision cross-checks, cost-anomaly detection, satellite/NDVI data —
   these were scoped as a v2 differentiator, not part of this initial build.
+
+## Roles and who sees what
+
+- **Client** sees only their own cases, and only reports and documents an admin has
+  *approved and shared with the client*. Staff appear as role labels ("Lawyer",
+  "Field agent"), never by name. Messages are a private thread with the iConfam team.
+- **Field agent / professional** see only cases they're assigned to and their own
+  submissions (plus anything the admin approves for the case team). A professional
+  can add milestones and submit reports and documents. Their only line of
+  communication is a private thread with the **admin**; they can't read or write to the
+  client, and the client can't see them.
+- **Admin** sees everything and is the second pair of eyes: every report and
+  document starts as *Awaiting review*. The admin approves it (choosing whether to
+  share with the client, the case team, or both), or rejects it with a note that is
+  sent back to the submitter. The Review Queue shows everything waiting.
+- **Assigning professionals:** from the case page, pick a specialty, then a person;
+  a case can have several (e.g. a lawyer and a surveyor).
+- **Status colours** are the same for every role: grey = not started, indigo = scoped,
+  blue = in progress, amber = needs action, green = done/approved, violet = on hold,
+  red = problem/rejected/overdue.
 
 ## 7. Testing
 

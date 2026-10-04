@@ -1,11 +1,8 @@
 import type { Milestone } from "@/lib/types";
+import { statusStyle } from "@/lib/statusStyles";
 
-const STATUS_STYLE: Record<string, string> = {
-  pending: "bg-line",
-  in_progress: "bg-stamp/50",
-  confirmed: "bg-verified",
-  issue_found: "bg-red-400",
-};
+// Same colours as every other milestone status in the app.
+const barFor = (status: string) => statusStyle("milestone", status).bar;
 
 const LEGEND: { key: string; label: string }[] = [
   { key: "pending", label: "Pending" },
@@ -35,7 +32,7 @@ export default function MilestoneGantt({
                   <div
                     key={m.id}
                     title={`${m.name} — ${m.status.replace("_", " ")}`}
-                    className={`h-3 flex-1 rounded-sm ${STATUS_STYLE[m.status] ?? "bg-line"}`}
+                    className={`h-3 flex-1 rounded-sm ${barFor(m.status)}`}
                   />
                 ))}
               </div>
@@ -47,7 +44,7 @@ export default function MilestoneGantt({
       <div className="mt-5 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-line pt-3">
         {LEGEND.map((l) => (
           <span key={l.key} className="flex items-center gap-1.5 text-xs text-neutral-500">
-            <span className={`h-2.5 w-2.5 rounded-sm ${STATUS_STYLE[l.key]}`} />
+            <span className={`h-2.5 w-2.5 rounded-sm ${barFor(l.key)}`} />
             {l.label}
           </span>
         ))}

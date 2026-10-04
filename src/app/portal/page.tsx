@@ -5,8 +5,10 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
 import type { Case } from "@/lib/types";
-import { CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "@/lib/types";
-import Badge from "@/components/Badge";
+import { CASE_TYPE_LABELS } from "@/lib/types";
+import { statusStyle } from "@/lib/statusStyles";
+import { timeAgo } from "@/lib/format";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function ClientCasesPage() {
   const { profile } = useAuth();
@@ -51,13 +53,17 @@ export default function ClientCasesPage() {
           <Link
             key={c.id}
             href={`/portal/cases/${c.id}`}
-            className="block rounded-lg border border-line bg-white p-4 hover:border-stamp"
+            className={`block rounded-lg border border-l-4 border-line bg-white p-4 transition hover:shadow-sm ${statusStyle("case", c.status).accent}`}
           >
-            <div className="mb-1 flex items-center justify-between">
+            <div className="mb-1 flex items-center justify-between gap-3">
               <span className="font-semibold text-navy">{c.title}</span>
-              <Badge className="border-line text-neutral-600">{CASE_STATUS_LABELS[c.status]}</Badge>
+              <StatusBadge kind="case" value={c.status} />
             </div>
-            <p className="text-sm text-neutral-500">{CASE_TYPE_LABELS[c.case_type]}</p>
+            <p className="text-sm text-neutral-500">
+              {CASE_TYPE_LABELS[c.case_type]}
+              <span className="text-neutral-300"> · </span>
+              <span className="text-neutral-400">Updated {timeAgo(c.updated_at)}</span>
+            </p>
           </Link>
         ))}
         {cases.length === 0 && (
