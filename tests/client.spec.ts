@@ -18,7 +18,7 @@ test.describe("Client", () => {
     const seed = loadSeed();
     await page.goto(`/portal/cases/${seed.caseId}`);
     await expect(page.getByRole("heading", { name: "E2E Test Case" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Progress" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Verification journey" })).toBeVisible();
     // Regression check: this used to render the raw enum value ("confirmed")
     // rather than the proper label — both read the same for this particular
     // status, so the meaningful check is that "in_progress" (the raw form of
@@ -36,28 +36,28 @@ test.describe("Client", () => {
     await expect(page.getByText("1. Confirm the boundaries with a surveyor.")).toBeVisible();
   });
 
-  test("Steps & reports can be folded away and each step unfolded", async ({ page }) => {
+  test("Verification journey can be folded away and each step unfolded", async ({ page }) => {
     const seed = loadSeed();
     await page.goto(`/portal/cases/${seed.caseId}`);
 
-    const stepsToggle = page.getByRole("button", { name: /Steps & reports/ });
+    const stepsToggle = page.getByRole("button", { name: /Verification journey/ });
     await expect(stepsToggle).toHaveAttribute("aria-expanded", "true");
 
     // Steps start folded: the pending step's empty-state text is hidden.
     const emptyText = page.getByText("No report yet for this step");
-    await expect(emptyText).toHaveCount(0);
+    await expect(emptyText).toBeHidden();
     await page.getByRole("button", { name: /Confirm processing status/ }).click();
     await expect(emptyText).toBeVisible();
 
     // "Collapse all" folds every step again.
     await page.getByRole("button", { name: /Expand all|Collapse all/ }).click();
     await page.getByRole("button", { name: /Collapse all/ }).click();
-    await expect(emptyText).toHaveCount(0);
+    await expect(emptyText).toBeHidden();
 
     // Folding the whole section hides the steps themselves.
     await stepsToggle.click();
     await expect(stepsToggle).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByRole("button", { name: /Confirm processing status/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Confirm processing status/ })).toBeHidden();
   });
 
   test("client can download the case report as a PDF", async ({ page }) => {

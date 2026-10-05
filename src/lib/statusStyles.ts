@@ -40,6 +40,9 @@ export interface Tone {
   bar: string; // solid fill, e.g. timeline segments
   accent: string; // LEFT border colour only (pair with border-l-4)
   accentTop: string; // TOP border colour only (pair with border-t-4)
+  tint: string; // gradient start for soft tinted panels (use with bg-gradient-to-br ... to-white)
+  border: string; // soft outline colour for tinted panels
+  text: string; // readable text/icon colour on white or a tint
 }
 
 const TONES = {
@@ -49,6 +52,9 @@ const TONES = {
     bar: "bg-slate-300",
     accent: "border-l-slate-300",
     accentTop: "border-t-slate-300",
+    tint: "from-slate-50",
+    border: "border-slate-200",
+    text: "text-slate-600",
   },
   indigo: {
     badge: "border-indigo-300 bg-indigo-50 text-indigo-700",
@@ -56,6 +62,9 @@ const TONES = {
     bar: "bg-indigo-400",
     accent: "border-l-indigo-400",
     accentTop: "border-t-indigo-400",
+    tint: "from-indigo-50",
+    border: "border-indigo-200",
+    text: "text-indigo-700",
   },
   blue: {
     badge: "border-blue-300 bg-blue-50 text-blue-700",
@@ -63,6 +72,9 @@ const TONES = {
     bar: "bg-blue-500",
     accent: "border-l-blue-500",
     accentTop: "border-t-blue-500",
+    tint: "from-blue-50",
+    border: "border-blue-200",
+    text: "text-blue-700",
   },
   amber: {
     badge: "border-amber-300 bg-amber-50 text-amber-800",
@@ -70,6 +82,9 @@ const TONES = {
     bar: "bg-amber-400",
     accent: "border-l-amber-400",
     accentTop: "border-t-amber-400",
+    tint: "from-amber-50",
+    border: "border-amber-200",
+    text: "text-amber-800",
   },
   green: {
     badge: "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -77,6 +92,9 @@ const TONES = {
     bar: "bg-emerald-500",
     accent: "border-l-emerald-500",
     accentTop: "border-t-emerald-500",
+    tint: "from-emerald-50",
+    border: "border-emerald-200",
+    text: "text-emerald-700",
   },
   violet: {
     badge: "border-violet-300 bg-violet-50 text-violet-700",
@@ -84,6 +102,9 @@ const TONES = {
     bar: "bg-violet-400",
     accent: "border-l-violet-400",
     accentTop: "border-t-violet-400",
+    tint: "from-violet-50",
+    border: "border-violet-200",
+    text: "text-violet-700",
   },
   red: {
     badge: "border-red-300 bg-red-50 text-red-700",
@@ -91,6 +112,9 @@ const TONES = {
     bar: "bg-red-500",
     accent: "border-l-red-500",
     accentTop: "border-t-red-500",
+    tint: "from-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
   },
   // The one status that should be impossible to miss.
   redSolid: {
@@ -99,6 +123,9 @@ const TONES = {
     bar: "bg-red-600",
     accent: "border-l-red-600",
     accentTop: "border-t-red-600",
+    tint: "from-red-50",
+    border: "border-red-300",
+    text: "text-red-700",
   },
 } satisfies Record<string, Tone>;
 
