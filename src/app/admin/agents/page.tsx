@@ -157,10 +157,13 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [manualLink, setManualLink] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(false);
+    setManualLink(null);
     setSubmitting(true);
 
     const { data: sessionData } = await supabase.auth.getSession();
@@ -185,6 +188,7 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
       return;
     }
     setSuccess(true);
+    setManualLink(json.emailed === false ? (json.inviteLink ?? null) : null);
     setSpecialty("");
     setFullName("");
     setEmail("");
@@ -253,7 +257,14 @@ function InviteForm({ onCreated }: { onCreated: () => void }) {
         />
       </div>
       {error && <p className="text-sm text-stamp">{error}</p>}
-      {success && <p className="text-sm text-verified">Invite email sent.</p>}
+      {success && !manualLink && <p className="text-sm text-verified">Invite email sent.</p>}
+      {success && manualLink && (
+        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Account created, but the email couldn&apos;t be sent (email isn&apos;t set up yet). Send them this
+          one-time link yourself:
+          <input readOnly value={manualLink} onFocus={(e) => e.currentTarget.select()} className="mt-2 w-full rounded border border-amber-300 bg-white px-2 py-1 text-xs" />
+        </div>
+      )}
       <button
         type="submit"
         disabled={submitting}

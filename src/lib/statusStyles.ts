@@ -5,11 +5,13 @@ import type {
   ReportStatusFlag,
   RecommendationVerdict,
   ReviewState,
+  LeadStage,
 } from "@/lib/types";
 import {
   CASE_STATUS_LABELS,
   MILESTONE_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
+  LEAD_STAGE_LABELS,
   REPORT_FLAG_LABELS,
   REVIEW_STATE_LABELS,
   VERDICT_LABELS,
@@ -129,7 +131,7 @@ const TONES = {
   },
 } satisfies Record<string, Tone>;
 
-export type StatusKind = "case" | "milestone" | "report" | "review" | "payment" | "verdict";
+export type StatusKind = "case" | "milestone" | "report" | "review" | "payment" | "verdict" | "lead";
 
 const VERDICT_TONE: Record<RecommendationVerdict, Tone> = {
   proceed: TONES.green,
@@ -175,6 +177,14 @@ const PAYMENT_TONE: Record<PaymentStatus, Tone> = {
   waived: TONES.grey,
 };
 
+const LEAD_TONE: Record<LeadStage, Tone> = {
+  new: TONES.amber,
+  call_booked: TONES.blue,
+  call_done: TONES.indigo,
+  converted: TONES.green,
+  lost: TONES.grey,
+};
+
 export function statusStyle(kind: StatusKind, value: string): Tone & { label: string } {
   switch (kind) {
     case "case":
@@ -201,6 +211,11 @@ export function statusStyle(kind: StatusKind, value: string): Tone & { label: st
       return {
         ...(VERDICT_TONE[value as RecommendationVerdict] ?? TONES.grey),
         label: VERDICT_LABELS[value as RecommendationVerdict] ?? value,
+      };
+    case "lead":
+      return {
+        ...(LEAD_TONE[value as LeadStage] ?? TONES.grey),
+        label: LEAD_STAGE_LABELS[value as LeadStage] ?? value,
       };
     case "payment":
       return {

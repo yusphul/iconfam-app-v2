@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
-import type { Case, Milestone, PaymentStatus, RecommendationVerdict } from "@/lib/types";
+import type { Case, Lead, Milestone, PaymentStatus, RecommendationVerdict } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
 import { statusStyle } from "@/lib/statusStyles";
 import { CASE_TYPE_IMAGE, firstName, greeting } from "@/lib/caseVisuals";
@@ -23,11 +23,21 @@ export default function ClientCasesPage() {
   const [reportCount, setReportCount] = useState(0);
   const [feesDue, setFeesDue] = useState<Set<string>>(new Set());
   const [verdicts, setVerdicts] = useState<Record<string, RecommendationVerdict>>({});
+  const [requests, setRequests] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!profile) return;
     async function load() {
+      // Requests that haven't become a case yet (waiting for the intake call or a quote).
+      const { data: leadRows } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("client_id", profile!.id)
+        .in("stage", ["new", "call_booked", "call_done"])
+        .order("created_at", { ascending: false });
+      setRequests((leadRows as Lead[]) ?? []);
+
       const { data } = await supabase
         .from("cases")
         .select("*")
@@ -147,6 +157,22 @@ export default function ClientCasesPage() {
         </section>
       )}
 
+      {requests.length > 0 && (
+        <section aria-labelledby="requests-heading">
+          <h2 id="requests-heading" className="mb-4 font-display text-xl font-semibold text-navy">
+            Your requests
+            <span className="ml-2 text-base font-medium text-neutral-400">{requests.length}</span>
+          </h2>
+          <ul className="grid gap-4 md:grid-cols-2">
+            {requests.map((l) => (
+              <li key={l.id}>
+                <RequestCard lead={l} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {cases.length > 0 ? (
         <section aria-labelledby="cases-heading">
           <h2 id="cases-heading" className="mb-4 font-display text-xl font-semibold text-navy">
@@ -166,10 +192,60 @@ export default function ClientCasesPage() {
             ))}
           </ul>
         </section>
-      ) : (
+      ) : requests.length === 0 ? (
         <EmptyState />
-      )}
+      ) : null}
     </div>
+  );
+}
+
+function RequestCard({ lead }: { lead: Lead }) {
+  const img = CASE_TYPE_IMAGE[lead.service];
+  const when = lead.call_at
+    ? new Date(lead.call_at).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+  return (
+    <article className="flex gap-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
+      <div className="relative hidden h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-footerBg sm:block">
+        <Image src={img.src} alt="" fill sizes="80px" className="object-cover" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-neutral-500">{CASE_TYPE_LABELS[lead.service]}</p>
+        <h3 className="line-clamp-2 font-display text-base font-semibold text-navy">{lead.summary}</h3>
+        {lead.stage === "new" && (
+          <>
+            <p className="mt-1 text-sm text-neutral-600">Next step: pick a time for a short call.</p>
+            <Link
+              href={`/book/${lead.token}`}
+              className="mt-2 inline-flex items-center rounded-full bg-stamp px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+            >
+              Book your call
+            </Link>
+          </>
+        )}
+        {lead.stage === "call_booked" && (
+          <>
+            <p className="mt-1 text-sm text-neutral-700">
+              Call booked: <span className="font-semibold text-navy">{when}</span> · {lead.call_minutes} min
+            </p>
+            <Link href={`/book/${lead.token}`} className="mt-1 inline-block text-sm font-medium text-stamp hover:underline">
+              Join details or change time
+            </Link>
+          </>
+        )}
+        {lead.stage === "call_done" && (
+          <p className="mt-1 text-sm text-neutral-600">
+            Thanks for talking with us. We&apos;re preparing your scope and fee.
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
 

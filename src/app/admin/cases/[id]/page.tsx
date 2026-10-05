@@ -304,6 +304,14 @@ export default function AdminCaseDetail() {
         </p>
       )}
 
+      {caseRow.deposit_required &&
+        !payments.some((p) => p.kind === "deposit" && (p.status === "paid" || p.status === "waived")) && (
+          <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <b>Waiting for the initial deposit.</b> Work can&apos;t start and no field agent or professional can be
+            assigned until it is paid (or waived). See Payments below.
+          </p>
+        )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {/* Status + assignment */}
@@ -624,18 +632,41 @@ export default function AdminCaseDetail() {
                   <div>
                     <div>{p.description}</div>
                     <div className="text-xs text-neutral-400">
-                      {p.currency} {p.amount}
+                      {p.currency} {Number(p.amount).toLocaleString()}
                     </div>
+                    {p.reported_at && p.status !== "paid" && p.status !== "waived" && (
+                      <div className="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                        Client says they paid by{" "}
+                        {p.method === "bank_ngn"
+                          ? `naira transfer (NGN ${Number(p.ngn_amount ?? 0).toLocaleString()} at ${p.fx_rate}/USD)`
+                          : "USD transfer"}
+                        . Reference: <b>{p.client_reference}</b>. Check your bank, then confirm.
+                      </div>
+                    )}
+                    {p.status === "paid" && p.method && (
+                      <div className="mt-0.5 text-xs text-neutral-400">
+                        Paid by {p.method === "card" ? "card" : p.method === "bank_ngn" ? "naira transfer" : "USD transfer"}
+                        {p.client_reference ? ` · ${p.client_reference}` : ""}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge kind="payment" value={p.status} />
                     {p.status !== "paid" && p.status !== "waived" && (
-                      <button
-                        onClick={() => markPaymentPaid(p.id)}
-                        className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-                      >
-                        Mark paid
-                      </button>
+                      <>
+                        <button
+                          onClick={() => markPaymentPaid(p.id)}
+                          className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                        >
+                          {p.reported_at ? "Confirm received" : "Mark paid"}
+                        </button>
+                        <button
+                          onClick={() => run(supabase.from("payments").update({ status: "waived" }).eq("id", p.id))}
+                          className="rounded border border-line px-2 py-1 text-xs text-neutral-600 hover:bg-white"
+                        >
+                          Waive
+                        </button>
+                      </>
                     )}
                   </div>
                 </li>

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { renderEmail } from "@/lib/email/templates";
+import { sendWithResend } from "@/lib/email/send";
+import { appUrl } from "@/lib/email/config";
 
-// This route is the ONLY place the service role key is used — it never reaches the
-// browser. It invites a new person (agent/professional/client) by email using
-// Supabase's built-in invite flow: Supabase sends them a real email with a link that
-// lets them set their own password — we never generate or share a password ourselves.
+// This route uses the service role key (server-side only; it never reaches the
+// browser). It invites a new person (agent/professional/client) by email using
+// a one-time "set your password" link sent from iConfam's own email — we never
+// generate or share a password ourselves.
 // The matching public.users profile row is created automatically by the
 // on_auth_user_created trigger (see supabase/migrations/0003_client_self_signup.sql)
-// reading the metadata passed to inviteUserByEmail below — this route does NOT
+// reading the metadata passed to createUser below — this route does NOT
 // insert into public.users directly anymore, since that would race the trigger
 // and fail on a duplicate primary key. Callable only by an admin.
 
@@ -74,31 +77,62 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // req.nextUrl.origin matches wherever this is actually running — localhost while
-  // developing, a Vercel preview URL, or app.iconfam.com once that's attached —
-  // so the invite link always sends people back to the right place.
+  // The person is created here and the "set your password" link is sent from OUR
+  // email system (same sender and look as every other iConfam email), not by
+  // Supabase's separate invite mail. The profile row is still created by the
+  // on_auth_user_created trigger from the metadata below.
   const redirectTo = `${req.nextUrl.origin}/set-password`;
+  const cleanEmail = String(email).trim().toLowerCase();
 
-  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-    email,
-    {
-      redirectTo,
-      data: {
-        full_name,
-        whatsapp_number: whatsapp_number ?? null,
-        role,
-        region: region ?? null,
-        country: country ?? null,
-        specialty: role === "professional" ? specialty : null,
-      },
-    }
-  );
-  if (inviteError || !invited?.user) {
+  const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+    email: cleanEmail,
+    email_confirm: true,
+    user_metadata: {
+      full_name,
+      whatsapp_number: whatsapp_number ?? null,
+      role,
+      region: region ?? null,
+      country: country ?? null,
+      specialty: role === "professional" ? specialty : null,
+    },
+  });
+  if (createError || !created?.user) {
+    const exists = /already|registered|exists/i.test(createError?.message ?? "");
     return NextResponse.json(
-      { error: inviteError?.message ?? "Failed to send the invite email." },
+      { error: exists ? "Someone with that email already has an account." : (createError?.message ?? "Could not create the account.") },
       { status: 400 }
     );
   }
 
-  return NextResponse.json({ ok: true, userId: invited.user.id });
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "recovery",
+    email: cleanEmail,
+    options: { redirectTo },
+  });
+  const link = linkData?.properties?.action_link;
+  if (linkError || !link) {
+    return NextResponse.json({
+      ok: true,
+      userId: created.user.id,
+      emailed: false,
+      error: "The account was created but we couldn't make a sign-in link. Use \"Forgot password\" on the sign-in page.",
+    });
+  }
+
+  const mail = renderEmail(
+    { kind: "invite", to_name: full_name, payload: { role, link } },
+    { appUrl: appUrl(req.nextUrl.origin), timezone: "UTC" }
+  );
+  const sent = mail
+    ? await sendWithResend({ to: cleanEmail, ...mail })
+    : { ok: false as const, error: "no template" };
+
+  return NextResponse.json({
+    ok: true,
+    userId: created.user.id,
+    emailed: sent.ok,
+    // If email isn't set up yet (or failed), hand the admin the link so they can
+    // pass it on themselves. It is single-use and expires.
+    ...(sent.ok ? {} : { inviteLink: link }),
+  });
 }

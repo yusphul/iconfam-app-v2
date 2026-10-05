@@ -65,6 +65,9 @@ export interface Case {
   title: string;
   location_description: string | null;
   assigned_agent_id: string | null;
+  deposit_required: boolean;
+  quote_total: number | null;
+  quote_currency: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -156,7 +159,70 @@ export interface Payment {
   status: PaymentStatus;
   paid_at: string | null;
   created_at: string;
+  kind: PaymentKind;
+  method: PaymentMethod | null;
+  client_reference: string | null;
+  reported_at: string | null;
+  ngn_amount: number | null;
+  fx_rate: number | null;
 }
+
+export type PaymentKind = "deposit" | "balance" | "milestone" | "other";
+export type PaymentMethod = "card" | "bank_usd" | "bank_ngn" | "other";
+
+export type LeadStage = "new" | "call_booked" | "call_done" | "converted" | "lost";
+
+export interface Lead {
+  id: string;
+  token: string;
+  client_id: string | null;
+  name: string;
+  email: string;
+  phone: string | null;
+  service: CaseType;
+  summary: string;
+  details: string | null;
+  stage: LeadStage;
+  call_at: string | null;
+  call_minutes: 30 | 60 | null;
+  call_link: string | null;
+  converted_case_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type IntakeProcessStage = "not_started" | "started" | "stuck" | "unsure";
+
+export interface LeadIntake {
+  lead_id: string;
+  process_stage: IntakeProcessStage | null;
+  documents_held: string | null;
+  goal: string | null;
+  deadline: string | null;
+  notes: string | null;
+}
+
+export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
+  new: "Needs a call",
+  call_booked: "Call booked",
+  call_done: "Call done",
+  converted: "Quoted",
+  lost: "Closed",
+};
+
+export const PAYMENT_KIND_LABELS: Record<PaymentKind, string> = {
+  deposit: "Initial deposit",
+  balance: "Balance",
+  milestone: "Milestone payment",
+  other: "Payment",
+};
+
+export const INTAKE_PROCESS_LABELS: Record<IntakeProcessStage, string> = {
+  not_started: "Brand new, nothing started",
+  started: "Started, in progress",
+  stuck: "Started, but stuck",
+  unsure: "Not sure",
+};
 
 export interface CaseMessage {
   id: string;

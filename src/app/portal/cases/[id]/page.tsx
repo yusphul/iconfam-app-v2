@@ -27,6 +27,7 @@ import Disclosure from "@/components/portal/Disclosure";
 import Lightbox, { type LightboxImage } from "@/components/portal/Lightbox";
 import ProgressRing from "@/components/portal/ProgressRing";
 import Skeleton from "@/components/portal/Skeleton";
+import PaymentPanel, { depositState, type PaymentInstructions } from "@/components/journey/PaymentPanel";
 import {
   AlertIcon,
   BangIcon,
@@ -58,6 +59,8 @@ export default function ClientCaseDetail() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({});
+  const [instructions, setInstructions] = useState<PaymentInstructions | null>(null);
+  const [openPay, setOpenPay] = useState<string | null>(null);
   const [recommendation, setRecommendation] = useState<CaseRecommendation | null>(null);
   const [openSteps, setOpenSteps] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -120,8 +123,25 @@ export default function ClientCaseDetail() {
       setMediaByReport(mediaMap);
     }
 
-    const { data: pay } = await supabase.from("payments").select("*").eq("case_id", id);
+    const { data: pay } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("case_id", id)
+      .order("created_at");
     setPayments((pay as Payment[]) ?? []);
+
+    // Bank details and the naira rate, only needed when something is due.
+    const { data: ins } = await supabase.rpc("payment_instructions");
+    const insRow = Array.isArray(ins) ? ins[0] : ins;
+    setInstructions(
+      insRow
+        ? {
+            bank_usd: insRow.bank_usd,
+            bank_ngn: insRow.bank_ngn,
+            usd_to_ngn_rate: insRow.usd_to_ngn_rate ? Number(insRow.usd_to_ngn_rate) : null,
+          }
+        : null
+    );
 
     // Same gate for documents: only approved + shared-with-client rows come back.
     const { data: docs } = await supabase.from("documents").select("*").eq("case_id", id);
@@ -349,6 +369,18 @@ export default function ClientCaseDetail() {
         </dl>
       </section>
 
+      {caseRow.deposit_required && (
+        <DepositBanner
+          state={depositState(payments)}
+          payment={payments.find((p) => p.kind === "deposit")}
+          onPay={() => {
+            const dep = payments.find((p) => p.kind === "deposit");
+            if (dep) setOpenPay(dep.id);
+            document.getElementById("payments")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      )}
+
       <RecommendationPanel recommendation={recommendation} />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
@@ -454,23 +486,17 @@ export default function ClientCaseDetail() {
         </CollapsibleSection>
 
         <aside className="space-y-6">
-          <SideCard title="Payments">
-            <ul className="space-y-3">
-              {payments.map((p) => (
-                <li key={p.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm text-neutral-700">{p.description}</p>
-                    <p className="font-display text-lg font-semibold tabular-nums text-navy">
-                      {p.currency} {Number(p.amount).toLocaleString()}
-                    </p>
-                  </div>
-                  <StatusBadge kind="payment" value={p.status} />
-                </li>
-              ))}
-              {payments.length === 0 && (
-                <p className="text-sm text-neutral-500">No fees on this case yet.</p>
-              )}
-            </ul>
+          <SideCard title="Payments" id="payments">
+            <PaymentPanel
+              payments={payments}
+              instructions={instructions}
+              openId={openPay}
+              onOpen={setOpenPay}
+              onChanged={() => {
+                setOpenPay(null);
+                load();
+              }}
+            />
           </SideCard>
 
           <SideCard title="Documents">
@@ -713,9 +739,62 @@ function ReportCard({
   );
 }
 
-function SideCard({ title, children }: { title: string; children: React.ReactNode }) {
+function DepositBanner({
+  state,
+  payment,
+  onPay,
+}: {
+  state: "none" | "due" | "reported" | "paid";
+  payment?: Payment;
+  onPay: () => void;
+}) {
+  if (state === "none") return null;
+  if (state === "paid") {
+    return (
+      <section className="flex items-start gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white" aria-hidden="true">
+          <CheckIcon size={20} />
+        </span>
+        <div>
+          <h2 className="font-display text-lg font-semibold text-navy">Deposit received. Thank you.</h2>
+          <p className="mt-0.5 text-neutral-700">We&apos;re assigning your team and your steps will appear below.</p>
+        </div>
+      </section>
+    );
+  }
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm">
+      <div className="flex items-start gap-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white" aria-hidden="true">
+          <ClockIcon size={20} />
+        </span>
+        <div>
+          <h2 className="font-display text-lg font-semibold text-navy">
+            {state === "reported" ? "We're confirming your deposit" : "Pay your deposit to start"}
+          </h2>
+          <p className="mt-0.5 max-w-prose text-neutral-700">
+            {state === "reported"
+              ? "We'll begin as soon as your transfer is confirmed, usually within one business day."
+              : `We begin work as soon as your initial deposit${payment ? ` of ${payment.currency} ${Number(payment.amount).toLocaleString()}` : ""} is received. Nothing else is charged until then.`}
+          </p>
+        </div>
+      </div>
+      {state === "due" && (
+        <button
+          type="button"
+          onClick={onPay}
+          className="rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+        >
+          Pay deposit
+        </button>
+      )}
+    </section>
+  );
+}
+
+function SideCard({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-24 rounded-2xl border border-line bg-white p-5 shadow-sm">
       <h2 className="mb-3 font-display text-lg font-semibold text-navy">{title}</h2>
       {children}
     </section>

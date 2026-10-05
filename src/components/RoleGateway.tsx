@@ -214,7 +214,7 @@ export default function RoleGateway() {
               Sign in
             </Link>
             <Link
-              href="/signup"
+              href="/start"
               className="rounded-full bg-survey px-4 py-1.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-surveyLight"
             >
               Get started
@@ -263,7 +263,7 @@ export default function RoleGateway() {
             </p>
             <div className="gateway-rise mt-8 flex flex-wrap gap-3" style={{ animationDelay: "750ms" }}>
               <Link
-                href="/signup"
+                href="/start"
                 className="rounded-full bg-survey px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-surveyLight hover:shadow-lg hover:shadow-survey/30"
               >
                 Get started
@@ -443,7 +443,7 @@ export default function RoleGateway() {
             </a>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link
-                href="/signup"
+                href="/start"
                 className="inline-block rounded-full bg-chalk px-7 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 hover:shadow-lg"
               >
                 Get started
@@ -570,7 +570,7 @@ export default function RoleGateway() {
                   </a>
                 </li>
                 <li>
-                  <Link href="/signup" className="transition-colors duration-200 hover:text-survey">
+                  <Link href="/start" className="transition-colors duration-200 hover:text-survey">
                     Get started
                   </Link>
                 </li>
