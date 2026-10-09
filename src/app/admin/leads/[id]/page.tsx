@@ -7,6 +7,8 @@ import type { AppUser, IntakeProcessStage, Lead, LeadIntake } from "@/lib/types"
 import { CASE_TYPE_LABELS, INTAKE_PROCESS_LABELS } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
+import Link from "next/link";
+import { MAX_VISITS, buildVisitQuote, fieldCostNgn, isVisitService, type VisitZone } from "@/lib/visitPricing";
 
 const FIELD = "w-full rounded border border-line bg-paper px-3 py-2 text-sm";
 
@@ -30,6 +32,13 @@ export default function LeadDetailPage() {
   const [currency, setCurrency] = useState<"USD" | "NGN">("USD");
   const [depositPct, setDepositPct] = useState("50");
   const [creating, setCreating] = useState(false);
+  // per-visit pricing (site inspection and farm oversight)
+  const [zones, setZones] = useState<VisitZone[]>([]);
+  const [visitFee, setVisitFee] = useState(0);
+  const [rate, setRate] = useState<number | null>(null);
+  const [zoneCode, setZoneCode] = useState("");
+  const [visits, setVisits] = useState("1");
+  const [custom, setCustom] = useState(false);
   const [manualLink, setManualLink] = useState<{ link: string; caseId: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -41,6 +50,16 @@ export default function LeadDetailPage() {
       setTitle((t) => t || row.summary);
       const { data: i } = await supabase.from("lead_intake").select("*").eq("lead_id", id).maybeSingle();
       setIntake((i as LeadIntake | null) ?? {});
+      const [{ data: z }, { data: bs }] = await Promise.all([
+        supabase.from("visit_zones").select("*").order("sort_order"),
+        supabase.from("booking_settings").select("visit_fee_usd, usd_to_ngn_rate").single(),
+      ]);
+      const zs = (z as VisitZone[]) ?? [];
+      setZones(zs);
+      setZoneCode((c) => c || zs[0]?.code || "");
+      const b = bs as { visit_fee_usd: number; usd_to_ngn_rate: number | null } | null;
+      setVisitFee(Number(b?.visit_fee_usd ?? 0));
+      setRate(b?.usd_to_ngn_rate ? Number(b.usd_to_ngn_rate) : null);
       // An existing client account for this person, if there is one.
       const q = supabase.from("users").select("*").eq("role", "client");
       const { data: u } = row.client_id
@@ -82,8 +101,13 @@ export default function LeadDetailPage() {
     else setNotice("Intake notes saved.");
   }
 
-  const totalNum = Number(total);
-  const pct = Number(depositPct);
+  // Visit services are priced per visit and prepaid in full; everything else is a custom quote.
+  const visitMode = !!lead && isVisitService(lead.service) && !custom;
+  const zone = zones.find((z) => z.code === zoneCode);
+  const vq = visitMode ? buildVisitQuote({ visits: Number(visits), zone, feeUsd: visitFee, rate }) : null;
+  const totalNum = visitMode ? (vq?.total ?? 0) : Number(total);
+  const pct = visitMode ? 100 : Number(depositPct);
+  const quoteCurrency: "USD" | "NGN" = visitMode ? "USD" : currency;
   const validQuote = totalNum > 0 && pct > 0 && pct <= 100 && title.trim().length >= 3;
   const deposit = validQuote ? Math.round(totalNum * pct) / 100 : 0;
 
@@ -113,8 +137,9 @@ export default function LeadDetailPage() {
         p_client: clientId,
         p_title: title.trim(),
         p_total: totalNum,
-        p_currency: currency,
+        p_currency: quoteCurrency,
         p_deposit_percent: pct,
+        p_lines: vq ? vq.lines : null,
       });
       if (err) throw new Error(err.message);
       if (inviteLink) {
@@ -244,34 +269,92 @@ export default function LeadDetailPage() {
       ) : (
         <Card title="Scope and quote">
           <p className="mb-3 text-sm text-neutral-600">
-            Creates the case, a deposit invoice and a balance invoice. The client pays the deposit before any work or assignment can begin.
+            {visitMode
+              ? "Creates the case and one invoice for the full amount. The client pays it before any work or assignment can begin."
+              : "Creates the case, a deposit invoice and a balance invoice. The client pays the deposit before any work or assignment can begin."}
           </p>
           <div className="space-y-3">
             <div>
               <label htmlFor="q-title" className="mb-1 block text-xs font-medium text-neutral-600">Case title (the client sees this)</label>
               <input id="q-title" value={title} onChange={(e) => setTitle(e.target.value)} className={FIELD} />
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label htmlFor="q-total" className="mb-1 block text-xs font-medium text-neutral-600">Total fee</label>
-                <input id="q-total" type="number" min="0" step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} className={FIELD} />
+            {visitMode ? (
+              <div className="space-y-3 rounded border border-line bg-paper p-3">
+                <p className="text-sm text-neutral-700">
+                  Priced per visit: your service fee plus the field agent&apos;s wage, transport and data. The client pays the
+                  whole amount up front.
+                </p>
+                {zones.length === 0 || rate === null ? (
+                  <p className="text-sm text-amber-800">
+                    {zones.length === 0 ? "No visit zones found. Run migration 0009. " : "Set the naira rate first. "}
+                    <Link href="/admin/settings" className="underline">Open settings</Link>
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="q-zone" className="mb-1 block text-xs font-medium text-neutral-600">Where is the site?</label>
+                        <select id="q-zone" value={zoneCode} onChange={(e) => setZoneCode(e.target.value)} className={FIELD}>
+                          {zones.map((z) => (
+                            <option key={z.code} value={z.code}>{z.code}: {z.label} (₦{fieldCostNgn(z).toLocaleString()} per visit)</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="q-visits" className="mb-1 block text-xs font-medium text-neutral-600">Number of visits</label>
+                        <input id="q-visits" type="number" min="1" max={MAX_VISITS} step="1" value={visits} onChange={(e) => setVisits(e.target.value)} className={FIELD} />
+                      </div>
+                    </div>
+                    {vq ? (
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {vq.lines.map((l) => (
+                            <tr key={l.label} className="border-t border-line first:border-t-0">
+                              <td className="py-1.5 pr-3 text-neutral-700">{l.label}</td>
+                              <td className="py-1.5 text-right tabular-nums">USD {l.amount.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-t border-navy font-semibold text-navy">
+                            <td className="py-1.5 pr-3">Total (about USD {vq.perVisit.toFixed(2)} per visit)</td>
+                            <td className="py-1.5 text-right tabular-nums">USD {vq.total.toFixed(2)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-sm text-amber-800">Enter a whole number of visits from 1 to {MAX_VISITS}.</p>
+                    )}
+                  </>
+                )}
+                <button type="button" onClick={() => setCustom(true)} className="text-xs text-neutral-500 underline">Quote a custom amount instead</button>
               </div>
-              <div>
-                <label htmlFor="q-cur" className="mb-1 block text-xs font-medium text-neutral-600">Currency</label>
-                <select id="q-cur" value={currency} onChange={(e) => setCurrency(e.target.value as "USD" | "NGN")} className={FIELD}>
-                  <option value="USD">USD</option>
-                  <option value="NGN">NGN</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="q-pct" className="mb-1 block text-xs font-medium text-neutral-600">Deposit %</label>
-                <input id="q-pct" type="number" min="1" max="100" value={depositPct} onChange={(e) => setDepositPct(e.target.value)} className={FIELD} />
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="q-total" className="mb-1 block text-xs font-medium text-neutral-600">Total fee</label>
+                    <input id="q-total" type="number" min="0" step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} className={FIELD} />
+                  </div>
+                  <div>
+                    <label htmlFor="q-cur" className="mb-1 block text-xs font-medium text-neutral-600">Currency</label>
+                    <select id="q-cur" value={currency} onChange={(e) => setCurrency(e.target.value as "USD" | "NGN")} className={FIELD}>
+                      <option value="USD">USD</option>
+                      <option value="NGN">NGN</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="q-pct" className="mb-1 block text-xs font-medium text-neutral-600">Deposit %</label>
+                    <input id="q-pct" type="number" min="1" max="100" value={depositPct} onChange={(e) => setDepositPct(e.target.value)} className={FIELD} />
+                  </div>
+                </div>
+                {lead && isVisitService(lead.service) && (
+                  <button type="button" onClick={() => setCustom(false)} className="text-xs text-neutral-500 underline">Use the per-visit pricing instead</button>
+                )}
+              </>
+            )}
             {validQuote && (
               <p className="rounded bg-paper px-3 py-2 text-sm text-neutral-700">
-                Deposit due now: <b>{currency} {deposit.toLocaleString()}</b>
-                {totalNum - deposit > 0 && <> · Balance: <b>{currency} {(totalNum - deposit).toLocaleString()}</b></>}
+                Deposit due now: <b>{quoteCurrency} {deposit.toLocaleString()}</b>
+                {totalNum - deposit > 0 && <> · Balance: <b>{quoteCurrency} {(totalNum - deposit).toLocaleString()}</b></>}
               </p>
             )}
             <button onClick={createCase} disabled={!validQuote || creating} className="rounded bg-stamp px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">

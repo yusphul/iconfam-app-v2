@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { buildVisitQuote, fieldCostNgn, type VisitZone } from "@/lib/visitPricing";
 
 interface Settings {
   timezone: string;
@@ -12,6 +13,7 @@ interface Settings {
   bank_instructions_usd: string | null;
   bank_instructions_ngn: string | null;
   usd_to_ngn_rate: number | null;
+  visit_fee_usd: number;
 }
 interface OutboxItem {
   id: string;
@@ -38,11 +40,12 @@ export default function SettingsPage() {
   const [s, setS] = useState<Settings | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [outbox, setOutbox] = useState<OutboxItem[]>([]);
+  const [zones, setZones] = useState<VisitZone[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   async function load() {
-    const [{ data: st }, { data: r }, { data: ob }] = await Promise.all([
+    const [{ data: st }, { data: r }, { data: ob }, { data: z }] = await Promise.all([
       supabase.from("booking_settings").select("*").single(),
       supabase.from("availability_rules").select("*").order("weekday").order("start_time"),
       supabase
@@ -50,7 +53,9 @@ export default function SettingsPage() {
         .select("id, kind, to_email, to_user_id, created_at, sent_at, attempts, last_error")
         .order("created_at", { ascending: false })
         .limit(15),
+      supabase.from("visit_zones").select("*").order("sort_order"),
     ]);
+    setZones((z as VisitZone[]) ?? []);
     setOutbox((ob as OutboxItem[]) ?? []);
     setS(st as Settings);
     setRules((r as Rule[]) ?? []);
@@ -74,11 +79,30 @@ export default function SettingsPage() {
         bank_instructions_usd: s.bank_instructions_usd?.trim() || null,
         bank_instructions_ngn: s.bank_instructions_ngn?.trim() || null,
         usd_to_ngn_rate: s.usd_to_ngn_rate ? Number(s.usd_to_ngn_rate) : null,
+        visit_fee_usd: Number(s.visit_fee_usd) || 0,
         updated_at: new Date().toISOString(),
       })
       .eq("id", true);
-    if (error) setErr(error.message.includes("time zone") ? "That time zone name isn't valid (try America/Chicago)." : error.message);
-    else setMsg("Saved.");
+    if (error) {
+      setErr(error.message.includes("time zone") ? "That time zone name isn't valid (try America/Chicago)." : error.message);
+      return;
+    }
+    for (const z of zones) {
+      const { error: zerr } = await supabase
+        .from("visit_zones")
+        .update({
+          label: z.label.trim() || z.code,
+          wage_ngn: Number(z.wage_ngn) || 0,
+          transport_ngn: Number(z.transport_ngn) || 0,
+          data_ngn: Number(z.data_ngn) || 0,
+        })
+        .eq("code", z.code);
+      if (zerr) {
+        setErr(zerr.message);
+        return;
+      }
+    }
+    setMsg("Saved.");
   }
 
   async function addRule(weekday: number) {
@@ -153,6 +177,43 @@ export default function SettingsPage() {
           <Field label="USD bank transfer details" id="busd"><textarea id="busd" rows={3} value={s.bank_instructions_usd ?? ""} onChange={(e) => setS({ ...s, bank_instructions_usd: e.target.value })} className={FIELD} placeholder="Account name, bank, routing and account number" /></Field>
           <Field label="Naira (NGN) bank transfer details" id="bngn"><textarea id="bngn" rows={3} value={s.bank_instructions_ngn ?? ""} onChange={(e) => setS({ ...s, bank_instructions_ngn: e.target.value })} className={FIELD} placeholder="Account name, bank, account number" /></Field>
           <Field label="Naira per 1 US dollar" id="rate"><input id="rate" type="number" min="0" step="0.01" value={s.usd_to_ngn_rate ?? ""} onChange={(e) => setS({ ...s, usd_to_ngn_rate: e.target.value ? Number(e.target.value) : null })} className={FIELD} placeholder="e.g. 1500" /></Field>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-line bg-white p-5">
+        <h2 className="mb-1 font-display text-base font-semibold text-navy">Visit pricing</h2>
+        <p className="mb-4 text-sm text-neutral-500">
+          Site inspection and farm oversight are priced per visit: your service fee plus what the field agent costs
+          (wage, transport and data, in naira). Property verification and documentation are quoted by hand after the call.
+        </p>
+        <div className="max-w-xs">
+          <Field label="iConfam service fee per visit (USD)" id="vfee">
+            <input id="vfee" type="number" min="0" step="0.01" value={s.visit_fee_usd} onChange={(e) => setS({ ...s, visit_fee_usd: Number(e.target.value) })} className={FIELD} />
+          </Field>
+        </div>
+        <h3 className="mb-2 mt-5 text-sm font-semibold text-navy">Field costs per visit (₦)</h3>
+        <div className="space-y-4">
+          {zones.map((z) => {
+            const set = (patch: Partial<VisitZone>) => setZones((cur) => cur.map((x) => (x.code === z.code ? { ...x, ...patch } : x)));
+            const rate = s.usd_to_ngn_rate;
+            const perVisit = buildVisitQuote({ visits: 1, zone: z, feeUsd: Number(s.visit_fee_usd) || 0, rate })?.total ?? null;
+            return (
+              <fieldset key={z.code} className="rounded border border-line p-3">
+                <legend className="px-1 text-xs font-semibold text-neutral-500">Zone {z.code}</legend>
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <Field label="Name" id={`zl-${z.code}`}><input id={`zl-${z.code}`} value={z.label} onChange={(e) => set({ label: e.target.value })} className={FIELD} /></Field>
+                  <Field label="Agent wage" id={`zw-${z.code}`}><input id={`zw-${z.code}`} type="number" min="0" value={z.wage_ngn} onChange={(e) => set({ wage_ngn: Number(e.target.value) })} className={FIELD} /></Field>
+                  <Field label="Transport" id={`zt-${z.code}`}><input id={`zt-${z.code}`} type="number" min="0" value={z.transport_ngn} onChange={(e) => set({ transport_ngn: Number(e.target.value) })} className={FIELD} /></Field>
+                  <Field label="Data" id={`zd-${z.code}`}><input id={`zd-${z.code}`} type="number" min="0" value={z.data_ngn} onChange={(e) => set({ data_ngn: Number(e.target.value) })} className={FIELD} /></Field>
+                </div>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Field cost ₦{fieldCostNgn(z).toLocaleString()} per visit
+                  {perVisit !== null ? <> · client pays about <b>USD {perVisit.toFixed(2)}</b> per visit</> : " · set the naira rate above to see the price in dollars"}
+                </p>
+              </fieldset>
+            );
+          })}
+          {zones.length === 0 && <p className="text-sm text-neutral-400">No zones found. Run migration 0009.</p>}
         </div>
       </section>
 

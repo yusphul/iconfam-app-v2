@@ -68,6 +68,7 @@ export interface Case {
   deposit_required: boolean;
   quote_total: number | null;
   quote_currency: string | null;
+  quote_lines: { label: string; amount: number }[] | null;
   created_at: string;
   updated_at: string;
 }

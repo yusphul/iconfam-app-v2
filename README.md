@@ -64,7 +64,8 @@ email; the server sends them through [Resend](https://resend.com).
 1. Create a Resend account, add and verify your sending domain (it gives you DNS records).
 2. Create an API key and set `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`,
    `NEXT_PUBLIC_SITE_URL` and `CRON_SECRET` in Vercel (see `.env.example`).
-3. Run `supabase/migrations/0007_*.sql` then `0008_email_notifications.sql` in the SQL editor.
+3. Run `supabase/migrations/0007_*.sql`, then `0008_email_notifications.sql`, then
+   `0009_visit_pricing_quote_lines.sql` in the SQL editor.
 4. Daily call reminders run from `vercel.json` (`/api/cron/reminders`).
 
 New people (clients, agents, professionals) are invited with a one-time "set your
@@ -198,3 +199,15 @@ project, not production, since it creates and deletes real data on every run.
   genuinely nothing here" later on.
 - WhatsApp/email notifications (Section 5) and client self-serve case requests are
   still not built, as noted above.
+
+## Pricing
+
+Property verification and documentation are quoted by hand after the intake call.
+Site inspection and farm oversight are priced per visit:
+
+    price = iConfam service fee + field costs (agent wage + transport + data)
+
+Set the service fee (default USD 60 per visit) and the naira field costs for each
+distance zone in **Admin, Settings, Visit pricing**. On a lead for one of those two
+services the quote builder converts the naira costs to dollars at the naira rate
+from the same page, shows the itemised lines, and asks for the full amount up front.

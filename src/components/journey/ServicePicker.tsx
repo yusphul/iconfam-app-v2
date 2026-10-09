@@ -5,6 +5,7 @@ import type { CaseType } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
 import { CASE_TYPE_IMAGE } from "@/lib/caseVisuals";
 import { CheckIcon } from "@/components/portal/icons";
+import { isVisitService } from "@/lib/visitPricing";
 
 // Four photo cards, one per kind of verification. A real radio group underneath,
 // so it works with keyboard and screen readers.
@@ -58,6 +59,11 @@ export default function ServicePicker({
           );
         })}
       </div>
+      <p id="service-pricing-note" aria-live="polite" className="mt-3 text-sm text-neutral-600">
+        {isVisitService(value)
+          ? "Priced per visit: our service fee plus your field agent's wage, travel and data. We confirm the exact amount after your call."
+          : "Quoted after your call, once we know what you already have and what is left to do."}
+      </p>
     </fieldset>
   );
 }

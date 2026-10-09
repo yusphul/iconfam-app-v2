@@ -487,6 +487,25 @@ export default function ClientCaseDetail() {
 
         <aside className="space-y-6">
           <SideCard title="Payments" id="payments">
+            {caseRow.quote_lines && caseRow.quote_lines.length > 0 && (
+              <div className="mb-4 rounded-lg bg-paper p-3 text-sm">
+                <p className="mb-1.5 font-semibold text-navy">Your quote</p>
+                <table className="w-full">
+                  <tbody>
+                    {caseRow.quote_lines.map((l) => (
+                      <tr key={l.label}>
+                        <td className="py-0.5 pr-3 text-neutral-700">{l.label}</td>
+                        <td className="py-0.5 text-right tabular-nums">{caseRow.quote_currency} {l.amount.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-line font-semibold text-navy">
+                      <td className="pt-1.5 pr-3">Total</td>
+                      <td className="pt-1.5 text-right tabular-nums">{caseRow.quote_currency} {Number(caseRow.quote_total).toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
             <PaymentPanel
               payments={payments}
               instructions={instructions}
