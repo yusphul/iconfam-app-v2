@@ -27,6 +27,7 @@ export default function LeadForm({
   const [email, setEmail] = useState(initialEmail);
   const [phone, setPhone] = useState("");
   const [summary, setSummary] = useState("");
+  const [siteAddress, setSiteAddress] = useState("");
   const [details, setDetails] = useState("");
   const [company, setCompany] = useState(""); // honeypot
   const [busy, setBusy] = useState(false);
@@ -51,6 +52,7 @@ export default function LeadForm({
           phone,
           service,
           summary,
+          siteAddress,
           details,
           company,
           startedAt: startedAt.current,
@@ -131,6 +133,25 @@ export default function LeadForm({
             placeholder="e.g. Governor's consent for a plot in Ikorodu, Lagos"
             className={FIELD}
           />
+        </div>
+        <div>
+          <label htmlFor="lead-address" className="mb-1.5 block text-sm font-medium text-navy">
+            Property or farm address
+          </label>
+          <input
+            id="lead-address"
+            required
+            minLength={5}
+            maxLength={300}
+            autoComplete="street-address"
+            value={siteAddress}
+            onChange={(e) => setSiteAddress(e.target.value)}
+            placeholder="Street, area or landmark, town, state"
+            className={FIELD}
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            Our field agent must be physically at this place before they can send you any photos or updates.
+          </p>
         </div>
         <div>
           <label htmlFor="lead-details" className="mb-1.5 block text-sm font-medium text-navy">

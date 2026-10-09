@@ -65,7 +65,7 @@ email; the server sends them through [Resend](https://resend.com).
 2. Create an API key and set `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`,
    `NEXT_PUBLIC_SITE_URL` and `CRON_SECRET` in Vercel (see `.env.example`).
 3. Run `supabase/migrations/0007_*.sql`, then `0008_email_notifications.sql`, then
-   `0009_visit_pricing_quote_lines.sql`, `0010_site_checkin_and_field_media.sql` in the SQL editor.
+   `0009_visit_pricing_quote_lines.sql`, `0010_site_checkin_and_field_media.sql`, `0011_site_address.sql` in the SQL editor.
 4. Daily call reminders run from `vercel.json` (`/api/cron/reminders`).
 
 New people (clients, agents, professionals) are invited with a one-time "set your

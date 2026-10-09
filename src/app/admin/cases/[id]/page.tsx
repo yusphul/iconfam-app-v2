@@ -47,6 +47,9 @@ export default function AdminCaseDetail() {
   const [siteLng, setSiteLng] = useState("");
   const [siteRadius, setSiteRadius] = useState("250");
   const [siteMsg, setSiteMsg] = useState<string | null>(null);
+  const [siteAddress, setSiteAddress] = useState("");
+  const [finding, setFinding] = useState(false);
+  const [places, setPlaces] = useState<{ lat: number; lng: number; label: string }[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({});
@@ -82,6 +85,7 @@ export default function AdminCaseDetail() {
       setSiteLat(cc.site_lat != null ? String(cc.site_lat) : "");
       setSiteLng(cc.site_lng != null ? String(cc.site_lng) : "");
       setSiteRadius(String(cc.site_radius_m ?? 250));
+      setSiteAddress(cc.site_address ?? cc.location_description ?? "");
     }
     setAssigned((cp as CaseProfessional[]) ?? []);
     // Seed the textarea once per page load, so a reload triggered by another
@@ -204,10 +208,48 @@ export default function AdminCaseDetail() {
     }
     const { error } = await supabase
       .from("cases")
-      .update({ site_lat: lat, site_lng: lng, site_radius_m: Math.round(radius) })
+      .update({
+        site_lat: lat,
+        site_lng: lng,
+        site_radius_m: Math.round(radius),
+        site_address: siteAddress.trim() || null,
+      })
       .eq("id", id);
     setSiteMsg(error ? error.message : "Site location saved.");
     if (!error) await load();
+  }
+
+  async function findOnMap() {
+    setSiteMsg(null);
+    setPlaces([]);
+    if (siteAddress.trim().length < 3) {
+      setSiteMsg("Enter the client's address first.");
+      return;
+    }
+    setFinding(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/geocode?q=${encodeURIComponent(siteAddress.trim())}`, {
+        headers: { Authorization: `Bearer ${sess.session?.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Lookup failed.");
+      if (!json.results.length) {
+        setSiteMsg("No match for that address. Try the nearest town or landmark, or enter coordinates by hand.");
+      } else {
+        setPlaces(json.results);
+      }
+    } catch (e) {
+      setSiteMsg(e instanceof Error ? e.message : "Lookup failed.");
+    }
+    setFinding(false);
+  }
+
+  function pickCandidate(c: { lat: number; lng: number }) {
+    setSiteLat(c.lat.toFixed(6));
+    setSiteLng(c.lng.toFixed(6));
+    setPlaces([]);
+    setSiteMsg("Pin placed. Check the map, adjust the allowed distance if needed, then save.");
   }
 
   async function useMyPosition() {
@@ -460,10 +502,40 @@ export default function AdminCaseDetail() {
 
           <Section title="Site location (field agent check-in)">
             <p className="mb-3 text-xs text-neutral-500">
-              Field agents can only open the camera once their phone is within the allowed distance of this
-              spot. Right-click the place in Google Maps and copy the two numbers, or stand at the site and
-              use your position.
+              The field agent can only open the camera and send updates once their phone is within the allowed
+              distance of this pin. Look up the address the client gave us, check the map, and save.
             </p>
+            <label className="mb-3 block text-sm text-neutral-600">
+              Property or farm address (from the client)
+              <div className="mt-1 flex gap-2">
+                <input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)}
+                  className="w-full rounded border border-line bg-paper px-3 py-2 text-sm" />
+                <button type="button" onClick={findOnMap} disabled={finding}
+                  className="shrink-0 rounded bg-navy px-3 py-2 text-sm font-medium text-white disabled:opacity-60">
+                  {finding ? "Looking…" : "Find on map"}
+                </button>
+              </div>
+            </label>
+            {places.length > 0 && (
+              <ul className="mb-3 space-y-1" aria-label="Matching places">
+                {places.map((c, i) => (
+                  <li key={i}>
+                    <button type="button" onClick={() => pickCandidate(c)}
+                      className="w-full rounded border border-line bg-white px-3 py-2 text-left text-sm hover:border-stamp">
+                      {c.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {siteLat && siteLng && Number.isFinite(Number(siteLat)) && Number.isFinite(Number(siteLng)) && (
+              <iframe
+                title="Site position"
+                className="mb-3 h-56 w-full rounded border border-line"
+                loading="lazy"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(siteLng) - 0.004},${Number(siteLat) - 0.003},${Number(siteLng) + 0.004},${Number(siteLat) + 0.003}&layer=mapnik&marker=${Number(siteLat)},${Number(siteLng)}`}
+              />
+            )}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="text-sm text-neutral-600">
                 Latitude

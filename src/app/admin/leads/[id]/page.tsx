@@ -197,7 +197,10 @@ export default function LeadDetailPage() {
             {account ? `Has an account (${account.full_name})` : "No account yet. We email them a link to set a password when you create the case."}
           </Item>
         </dl>
-        <p className="mt-4 font-medium text-navy">{lead.summary}</p>
+        <p className="mt-4 text-sm text-neutral-600">
+          <span className="font-medium text-navy">Site address:</span> {lead.site_address ?? "—"}
+        </p>
+        <p className="mt-2 font-medium text-navy">{lead.summary}</p>
         {lead.details && <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{lead.details}</p>}
       </Card>
 

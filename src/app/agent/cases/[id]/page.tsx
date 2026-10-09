@@ -118,6 +118,21 @@ export default function AgentCaseDetail() {
         </div>
       </div>
 
+      {profile.role === "agent" && (
+        <p
+          role="status"
+          className={`rounded border px-3 py-2 text-sm ${
+            caseRow.site_lat != null
+              ? "border-line bg-paper text-neutral-600"
+              : "border-amber-300 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {caseRow.site_lat != null
+            ? `Site: ${caseRow.site_address ?? caseRow.location_description ?? "marked on the map"}. You must be there, and check in, before you can send photos or a report.`
+            : "The site hasn't been pinned on the map yet. You can't check in or send a report until an admin confirms the location."}
+        </p>
+      )}
+
       <Section title="Milestones">
         <ol className="space-y-3">
           {milestones.map((m, i) => {

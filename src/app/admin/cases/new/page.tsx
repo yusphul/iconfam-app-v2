@@ -45,6 +45,7 @@ export default function NewCasePage() {
         case_type: caseType,
         client_id: clientId,
         location_description: location || null,
+        site_address: location && location.trim().length >= 5 ? location.trim() : null,
         assigned_agent_id: agentId || null,
         status: "intake",
       })

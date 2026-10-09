@@ -15,6 +15,7 @@ const ERRORS: Record<string, string> = {
   invalid_name: "Please enter your name.",
   invalid_email: "Please enter a valid email address.",
   invalid_summary: "Please describe what you need in a few words.",
+  invalid_address: "Please enter the property or farm address, with the town or area and state.",
   too_long: "One of your answers is too long.",
   too_many_requests: "We already have several requests from this email today. We'll be in touch soon.",
 };
@@ -41,6 +42,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Please choose what you need verified." }, { status: 400 });
   }
 
+  const siteAddress = String(body.siteAddress ?? "").trim();
+  if (siteAddress.length < 5) {
+    return NextResponse.json({ error: ERRORS.invalid_address }, { status: 400 });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
   const bearer = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
@@ -56,6 +62,7 @@ export async function POST(req: NextRequest) {
     p_service: service,
     p_summary: String(body.summary ?? ""),
     p_details: String(body.details ?? ""),
+    p_site_address: siteAddress,
   });
 
   if (error) {

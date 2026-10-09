@@ -65,6 +65,7 @@ export interface Case {
   title: string;
   location_description: string | null;
   assigned_agent_id: string | null;
+  site_address: string | null;
   site_lat: number | null;
   site_lng: number | null;
   site_radius_m: number;
@@ -186,6 +187,7 @@ export interface Lead {
   email: string;
   phone: string | null;
   service: CaseType;
+  site_address: string | null;
   summary: string;
   details: string | null;
   stage: LeadStage;
