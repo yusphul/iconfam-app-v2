@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
@@ -18,7 +17,8 @@ import type {
 } from "@/lib/types";
 import { CASE_TYPE_LABELS, VERDICT_LABELS } from "@/lib/types";
 import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
-import { CASE_TYPE_IMAGE, daysSince } from "@/lib/caseVisuals";
+import { daysSince } from "@/lib/caseVisuals";
+import Illustration from "@/components/portal/Illustration";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import MessageThread from "@/components/MessageThread";
@@ -281,23 +281,15 @@ export default function ClientCaseDetail() {
   const done = milestones.filter((m) => m.status === "confirmed").length;
   const issues = milestones.filter((m) => m.status === "issue_found").length;
   const allOpen = milestones.length > 0 && milestones.every((m) => openSteps.has(m.id));
-  const img = CASE_TYPE_IMAGE[caseRow.case_type];
   const opened = daysSince(caseRow.created_at);
 
   return (
     <div className="space-y-8">
       {/* The one bold moment: the case, seen from the ground. */}
       <section className="relative isolate overflow-hidden rounded-3xl bg-footerBg text-white shadow-lg">
-        <Image
-          src={img.src}
-          alt=""
-          fill
-          priority
-          sizes="(min-width: 1024px) 64rem, 100vw"
-          className="-z-20 object-cover object-[center_35%]"
-        />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-footerBg via-footerBg/80 to-footerBg/35" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-footerBg/70 via-footerBg/20 to-transparent" />
+        <Illustration kind={caseRow.case_type} calm className="absolute inset-0 -z-20 h-full w-full opacity-60 sm:opacity-100" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-footerBg/90 via-footerBg/30 to-transparent" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-footerBg/60 via-footerBg/10 to-transparent" />
 
         <div className="px-5 pt-5 sm:px-9 sm:pt-7">
           <div className="flex items-start justify-between gap-3">
@@ -341,12 +333,14 @@ export default function ClientCaseDetail() {
             </div>
 
             {milestones.length > 0 && (
-              <ProgressRing value={done} max={milestones.length} size={124} stroke={10}>
-                <span className="font-display text-3xl font-bold leading-none tabular-nums">
-                  {done}
-                </span>
-                <span className="mt-1 text-xs text-white/75">of {milestones.length} verified</span>
-              </ProgressRing>
+              <div className="rounded-full bg-footerBg/80 shadow-lg">
+                <ProgressRing value={done} max={milestones.length} size={124} stroke={10}>
+                  <span className="font-display text-3xl font-bold leading-none tabular-nums">
+                    {done}
+                  </span>
+                  <span className="mt-1 text-xs text-white/75">of {milestones.length} verified</span>
+                </ProgressRing>
+              </div>
             )}
           </div>
         </div>

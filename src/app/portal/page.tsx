@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
 import type { Case, Lead, Milestone, PaymentStatus, RecommendationVerdict } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
 import { statusStyle } from "@/lib/statusStyles";
-import { CASE_TYPE_IMAGE, firstName, greeting } from "@/lib/caseVisuals";
+import { firstName, greeting } from "@/lib/caseVisuals";
+import Illustration from "@/components/portal/Illustration";
 import { timeAgo } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import Skeleton from "@/components/portal/Skeleton";
@@ -200,7 +200,6 @@ export default function ClientCasesPage() {
 }
 
 function RequestCard({ lead }: { lead: Lead }) {
-  const img = CASE_TYPE_IMAGE[lead.service];
   const when = lead.call_at
     ? new Date(lead.call_at).toLocaleString(undefined, {
         weekday: "short",
@@ -213,7 +212,7 @@ function RequestCard({ lead }: { lead: Lead }) {
   return (
     <article className="flex gap-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
       <div className="relative hidden h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-footerBg sm:block">
-        <Image src={img.src} alt="" fill sizes="80px" className="object-cover" />
+        <Illustration kind={lead.service} className="absolute inset-0 h-full w-full" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-xs text-neutral-500">{CASE_TYPE_LABELS[lead.service]}</p>
@@ -302,7 +301,6 @@ function CaseTile({
   feeDue: boolean;
   verdict?: RecommendationVerdict;
 }) {
-  const img = CASE_TYPE_IMAGE[c.case_type];
   const done = steps.filter((s) => s.status === "confirmed").length;
   return (
     <Link
@@ -310,14 +308,11 @@ function CaseTile({
       className="group block overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
       <div className="relative h-40 overflow-hidden bg-footerBg">
-        <Image
-          src={img.src}
-          alt=""
-          fill
-          sizes="(min-width: 768px) 50vw, 100vw"
-          className="object-cover transition duration-700 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        <Illustration
+          kind={c.case_type}
+          className="absolute inset-0 h-full w-full transition duration-700 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-footerBg/85 via-footerBg/25 to-footerBg/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-footerBg/60 to-transparent" />
         <div className="absolute left-4 top-4">
           <StatusBadge kind="case" value={c.status} variant="glass" />
         </div>
@@ -382,14 +377,7 @@ function EmptyState() {
   return (
     <section className="overflow-hidden rounded-3xl border border-line bg-white shadow-sm md:grid md:grid-cols-2">
       <div className="relative min-h-[220px] bg-footerBg">
-        <Image
-          src="/hero-construction.jpg"
-          alt="A home under construction on a site in Nigeria"
-          fill
-          sizes="(min-width: 768px) 50vw, 100vw"
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-footerBg/60 to-transparent" />
+        <Illustration kind="welcome" label className="absolute inset-0 h-full w-full" />
       </div>
       <div className="flex flex-col justify-center gap-4 p-7 sm:p-9">
         <h2 className="font-display text-2xl font-bold tracking-tight text-navy">

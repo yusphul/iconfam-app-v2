@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import type { CaseType } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
-import { CASE_TYPE_IMAGE } from "@/lib/caseVisuals";
+import Illustration from "@/components/portal/Illustration";
 import { CheckIcon } from "@/components/portal/icons";
 import { isVisitService } from "@/lib/visitPricing";
 
@@ -38,14 +37,11 @@ export default function ServicePicker({
                 className="sr-only"
               />
               <div className="relative h-28 sm:h-32">
-                <Image
-                  src={CASE_TYPE_IMAGE[key].src}
-                  alt=""
-                  fill
-                  sizes="(min-width: 1024px) 12rem, 50vw"
-                  className="object-cover transition duration-500 group-hover:scale-105 motion-reduce:transition-none"
+                <Illustration
+                  kind={key}
+                  className="absolute inset-0 h-full w-full transition duration-500 group-hover:scale-105 motion-reduce:transition-none"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-footerBg via-footerBg/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-footerBg via-footerBg/40 to-transparent" />
                 {selected && (
                   <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-stamp text-white shadow">
                     <CheckIcon size={14} />
