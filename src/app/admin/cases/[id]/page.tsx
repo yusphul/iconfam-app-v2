@@ -26,6 +26,7 @@ import {
 } from "@/lib/types";
 import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
 import { detectContactInfo } from "@/lib/format";
+import { captureSummary, getPosition } from "@/lib/siteCheck";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import ReviewControls from "@/components/ReviewControls";
@@ -37,9 +38,15 @@ export default function AdminCaseDetail() {
   const { profile } = useAuth();
 
   const [caseRow, setCaseRow] = useState<Case | null>(null);
+  const siteSeeded = useRef(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [mediaByReport, setMediaByReport] = useState<Record<string, string[]>>({});
+  const [noteByReport, setNoteByReport] = useState<Record<string, string>>({});
+  const [siteLat, setSiteLat] = useState("");
+  const [siteLng, setSiteLng] = useState("");
+  const [siteRadius, setSiteRadius] = useState("250");
+  const [siteMsg, setSiteMsg] = useState<string | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({});
@@ -69,6 +76,13 @@ export default function AdminCaseDetail() {
       supabase.from("case_internal_notes").select("notes").eq("case_id", id).maybeSingle(),
     ]);
     setCaseRow(c as Case);
+    if (!siteSeeded.current && c) {
+      siteSeeded.current = true;
+      const cc = c as Case;
+      setSiteLat(cc.site_lat != null ? String(cc.site_lat) : "");
+      setSiteLng(cc.site_lng != null ? String(cc.site_lng) : "");
+      setSiteRadius(String(cc.site_radius_m ?? 250));
+    }
     setAssigned((cp as CaseProfessional[]) ?? []);
     // Seed the textarea once per page load, so a reload triggered by another
     // action never overwrites an edit that hasn't blurred/saved yet.
@@ -104,6 +118,7 @@ export default function AdminCaseDetail() {
       setReports(reportList);
 
       const mediaMap: Record<string, string[]> = {};
+      const noteMap: Record<string, string> = {};
       await Promise.all(
         reportList.map(async (report) => {
           const { data: mediaRows } = await supabase
@@ -112,6 +127,7 @@ export default function AdminCaseDetail() {
             .eq("report_id", report.id);
           const rows = (mediaRows as MediaItem[]) ?? [];
           if (rows.length === 0) return;
+          noteMap[report.id] = captureSummary(report.distance_m, rows);
           const { data: signed } = await supabase.storage
             .from("iconfam-media")
             .createSignedUrls(
@@ -124,6 +140,7 @@ export default function AdminCaseDetail() {
         })
       );
       setMediaByReport(mediaMap);
+      setNoteByReport(noteMap);
     } else {
       setReports([]);
     }
@@ -165,6 +182,43 @@ export default function AdminCaseDetail() {
     const { error } = await promise;
     if (error) setActionError(error.message);
     await load();
+  }
+
+  async function saveSite() {
+    setSiteMsg(null);
+    const lat = siteLat.trim() === "" ? null : Number(siteLat);
+    const lng = siteLng.trim() === "" ? null : Number(siteLng);
+    const radius = Number(siteRadius);
+    if ((lat === null) !== (lng === null)) {
+      setSiteMsg("Enter both latitude and longitude, or leave both empty.");
+      return;
+    }
+    if ((lat !== null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) ||
+        (lng !== null && (!Number.isFinite(lng) || lng < -180 || lng > 180))) {
+      setSiteMsg("Latitude must be between -90 and 90, longitude between -180 and 180.");
+      return;
+    }
+    if (!Number.isFinite(radius) || radius < 25 || radius > 5000) {
+      setSiteMsg("Allowed distance must be between 25 and 5000 metres.");
+      return;
+    }
+    const { error } = await supabase
+      .from("cases")
+      .update({ site_lat: lat, site_lng: lng, site_radius_m: Math.round(radius) })
+      .eq("id", id);
+    setSiteMsg(error ? error.message : "Site location saved.");
+    if (!error) await load();
+  }
+
+  async function useMyPosition() {
+    setSiteMsg(null);
+    try {
+      const p = await getPosition();
+      setSiteLat(p.lat.toFixed(6));
+      setSiteLng(p.lng.toFixed(6));
+    } catch (e) {
+      setSiteMsg(e instanceof Error ? e.message : "Couldn't get your location.");
+    }
   }
 
   const updateStatus = (status: CaseStatus) =>
@@ -404,6 +458,44 @@ export default function AdminCaseDetail() {
             </div>
           </Section>
 
+          <Section title="Site location (field agent check-in)">
+            <p className="mb-3 text-xs text-neutral-500">
+              Field agents can only open the camera once their phone is within the allowed distance of this
+              spot. Right-click the place in Google Maps and copy the two numbers, or stand at the site and
+              use your position.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="text-sm text-neutral-600">
+                Latitude
+                <input value={siteLat} onChange={(e) => setSiteLat(e.target.value)} inputMode="decimal"
+                  placeholder="6.524400" className="mt-1 w-full rounded border border-line bg-paper px-3 py-2 text-sm" />
+              </label>
+              <label className="text-sm text-neutral-600">
+                Longitude
+                <input value={siteLng} onChange={(e) => setSiteLng(e.target.value)} inputMode="decimal"
+                  placeholder="3.379200" className="mt-1 w-full rounded border border-line bg-paper px-3 py-2 text-sm" />
+              </label>
+              <label className="text-sm text-neutral-600">
+                Allowed distance (metres)
+                <input value={siteRadius} onChange={(e) => setSiteRadius(e.target.value)} inputMode="numeric"
+                  className="mt-1 w-full rounded border border-line bg-paper px-3 py-2 text-sm" />
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button type="button" onClick={saveSite} className="rounded bg-navy px-3 py-2 text-sm font-medium text-white">
+                Save site location
+              </button>
+              <button type="button" onClick={useMyPosition} className="rounded border border-line px-3 py-2 text-sm hover:border-stamp">
+                Use my current position
+              </button>
+              {caseRow.site_lat == null && (
+                <span className="text-xs text-stamp">Not set — the field agent can't check in yet.</span>
+              )}
+              {siteMsg && <span role="status" className="text-xs text-neutral-600">{siteMsg}</span>}
+            </div>
+          </Section>
+
+
           {/* Milestones, each with its own reports and the review controls */}
           <Section title="Milestones & reports">
             <ol className="mb-4 space-y-4">
@@ -461,6 +553,9 @@ export default function AdminCaseDetail() {
                                 ⚠ Possible contact details in this text ({warn.join(", ")}). Check
                                 before sharing.
                               </p>
+                            )}
+                            {noteByReport[r.id] && (
+                              <p className="mt-2 text-xs font-medium text-neutral-600">{noteByReport[r.id]}</p>
                             )}
                             {mediaByReport[r.id]?.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-2">

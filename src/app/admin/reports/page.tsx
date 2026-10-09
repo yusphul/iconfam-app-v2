@@ -1,5 +1,6 @@
 "use client";
 
+import { captureSummary } from "@/lib/siteCheck";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
@@ -35,6 +36,7 @@ const FILTERS: { value: ReviewState | "all"; label: string }[] = [
 export default function ReviewQueuePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [media, setMedia] = useState<Record<string, string[]>>({});
+  const [mediaNote, setMediaNote] = useState<Record<string, string>>({});
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<ReviewState | "all">("pending");
   const [loading, setLoading] = useState(true);
@@ -90,11 +92,13 @@ export default function ReviewQueuePage() {
     // Photos for reports, and a link for each document, so the admin can
     // actually look at what is being approved.
     const mediaMap: Record<string, string[]> = {};
+    const noteMap: Record<string, string> = {};
     await Promise.all(
       ((rp as Report[]) ?? []).map(async (report) => {
         const { data: rows } = await supabase.from("media").select("*").eq("report_id", report.id);
         const mediaRows = (rows as MediaItem[]) ?? [];
         if (mediaRows.length === 0) return;
+        noteMap[report.id] = captureSummary(report.distance_m, mediaRows);
         const { data: signed } = await supabase.storage
           .from("iconfam-media")
           .createSignedUrls(
@@ -107,6 +111,7 @@ export default function ReviewQueuePage() {
       })
     );
     setMedia(mediaMap);
+    setMediaNote(noteMap);
 
     const urls: Record<string, string> = {};
     await Promise.all(
@@ -196,6 +201,9 @@ export default function ReviewQueuePage() {
               {item.kind === "report" && (
                 <>
                   <p className="text-sm text-neutral-700">{item.row.findings_summary}</p>
+                  {mediaNote[r.id] && (
+                    <p className="mt-2 text-xs font-medium text-neutral-600">{mediaNote[r.id]}</p>
+                  )}
                   {media[r.id]?.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {media[r.id].map((url, idx) => (

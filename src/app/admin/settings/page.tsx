@@ -14,6 +14,7 @@ interface Settings {
   bank_instructions_ngn: string | null;
   usd_to_ngn_rate: number | null;
   visit_fee_usd: number;
+  min_site_captures: number;
 }
 interface OutboxItem {
   id: string;
@@ -80,6 +81,7 @@ export default function SettingsPage() {
         bank_instructions_ngn: s.bank_instructions_ngn?.trim() || null,
         usd_to_ngn_rate: s.usd_to_ngn_rate ? Number(s.usd_to_ngn_rate) : null,
         visit_fee_usd: Number(s.visit_fee_usd) || 0,
+        min_site_captures: Math.min(20, Math.max(1, Math.round(Number(s.min_site_captures) || 3))),
         updated_at: new Date().toISOString(),
       })
       .eq("id", true);
@@ -190,6 +192,12 @@ export default function SettingsPage() {
           <Field label="iConfam service fee per visit (USD)" id="vfee">
             <input id="vfee" type="number" min="0" step="0.01" value={s.visit_fee_usd} onChange={(e) => setS({ ...s, visit_fee_usd: Number(e.target.value) })} className={FIELD} />
           </Field>
+        </div>
+        <div className="mt-4 max-w-xs">
+          <Field label="Minimum live photos/videos per site report" id="mincap">
+            <input id="mincap" type="number" min="1" max="20" step="1" value={s.min_site_captures ?? 3} onChange={(e) => setS({ ...s, min_site_captures: Number(e.target.value) })} className={FIELD} />
+          </Field>
+          <p className="mt-1 text-xs text-neutral-500">Field agents can't submit a report until they have taken this many at the site.</p>
         </div>
         <h3 className="mb-2 mt-5 text-sm font-semibold text-navy">Field costs per visit (₦)</h3>
         <div className="space-y-4">

@@ -1,12 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
 import type { Milestone, ReportStatusFlag } from "@/lib/types";
 import { REPORT_FLAG_LABELS } from "@/lib/types";
 import BackLink from "@/components/BackLink";
+import CameraCapture from "@/components/agent/CameraCapture";
+import {
+  CheckInResult,
+  MAX_CAPTURES,
+  Position,
+  formatDistance,
+  friendlyCheckInError,
+  friendlySubmitError,
+  getPosition,
+} from "@/lib/siteCheck";
+
+type Source = "live" | "device_camera" | "gallery";
+interface Item {
+  id: string;
+  file: File;
+  kind: "image" | "video";
+  source: Source;
+  preview: string;
+  lat: number | null;
+  lng: number | null;
+}
 
 export default function SubmitReportPage() {
   const { milestoneId } = useParams<{ milestoneId: string }>();
@@ -16,14 +37,26 @@ export default function SubmitReportPage() {
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [findings, setFindings] = useState("");
   const [statusFlag, setStatusFlag] = useState<ReportStatusFlag>("confirmed_good");
-  const [files, setFiles] = useState<File[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [docType, setDocType] = useState("");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [locating, setLocating] = useState(false);
+  const [pos, setPos] = useState<Position | null>(null);
+  const [checkIn, setCheckIn] = useState<CheckInResult | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const itemsRef = useRef<Item[]>([]);
+  itemsRef.current = items;
+
+  const isAgent = profile?.role === "agent";
+  // Professionals and admins are not site-gated; field agents are.
+  const unlocked = !isAgent || (checkIn?.verified ?? false);
+  const minLive = isAgent ? checkIn?.min_captures ?? 3 : 0;
+  const liveCount = items.filter((i) => i.source !== "gallery").length;
+  const needMore = Math.max(0, minLive - liveCount);
 
   useEffect(() => {
     async function load() {
@@ -33,64 +66,119 @@ export default function SubmitReportPage() {
     load();
   }, [milestoneId]);
 
-  function captureLocation() {
-    if (!("geolocation" in navigator)) {
-      setError("This device/browser doesn't support location. You can still submit without it.");
-      return;
+  useEffect(() => {
+    return () => itemsRef.current.forEach((i) => URL.revokeObjectURL(i.preview));
+  }, []);
+
+  async function runCheckIn() {
+    if (!milestone) return;
+    setChecking(true);
+    setCheckError(null);
+    try {
+      const p = await getPosition();
+      setPos(p);
+      const { data, error: rpcError } = await supabase.rpc("check_in_site", {
+        p_milestone: milestone.id,
+        p_lat: p.lat,
+        p_lng: p.lng,
+        p_accuracy: Math.round(p.accuracy),
+      });
+      if (rpcError) throw new Error(friendlyCheckInError(rpcError.message));
+      setCheckIn(data as CheckInResult);
+    } catch (e) {
+      setCheckIn(null);
+      setCheckError(e instanceof Error ? e.message : "Check-in failed.");
     }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocating(false);
-      },
-      () => {
-        setError("Couldn't get your location — check permissions, or submit without it.");
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    setChecking(false);
+  }
+
+  function addItems(files: File[], source: Source, at: Position | null) {
+    setItems((prev) => {
+      const room = Math.max(0, MAX_CAPTURES - prev.length);
+      const added = files.slice(0, room).map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        kind: (file.type.startsWith("video") ? "video" : "image") as "image" | "video",
+        source,
+        preview: URL.createObjectURL(file),
+        lat: source === "gallery" ? null : at?.lat ?? null,
+        lng: source === "gallery" ? null : at?.lng ?? null,
+      }));
+      return [...prev, ...added];
+    });
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => {
+      const gone = prev.find((i) => i.id === id);
+      if (gone) URL.revokeObjectURL(gone.preview);
+      return prev.filter((i) => i.id !== id);
+    });
+  }
+
+  // Phone camera app fallback: one file per pick, but picks add up.
+  async function onDeviceCamera(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    let at = pos;
+    try {
+      at = await getPosition();
+      setPos(at);
+    } catch {
+      /* keep the check-in position */
+    }
+    addItems(files, "device_camera", at);
+  }
+
+  function onGallery(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    addItems(files, "gallery", null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!profile || !milestone) return;
+    if (!unlocked) {
+      setError("Check in at the site first.");
+      return;
+    }
+    if (needMore > 0) {
+      setError(`Take ${needMore} more live photo${needMore === 1 ? "" : "s"} or video${needMore === 1 ? "" : "s"} at the site.`);
+      return;
+    }
     setError(null);
     setSubmitting(true);
 
-    const { data: report, error: reportError } = await supabase
-      .from("reports")
-      .insert({
-        milestone_id: milestone.id,
-        submitted_by: profile.id,
-        findings_summary: findings,
-        status_flag: statusFlag,
-        geo_lat: coords?.lat ?? null,
-        geo_lng: coords?.lng ?? null,
-      })
-      .select()
-      .single();
-
-    if (reportError || !report) {
-      setError(reportError?.message ?? "Could not save the report.");
-      setSubmitting(false);
-      return;
+    const reportId = crypto.randomUUID();
+    const uploaded: string[] = [];
+    const media: { path: string; type: string; source: Source; lat: number | null; lng: number | null }[] = [];
+    for (const [idx, it] of items.entries()) {
+      const safe = it.file.name.replace(/[^A-Za-z0-9._-]/g, "_");
+      const path = `${milestone.case_id}/${reportId}/${Date.now()}-${idx}-${safe}`;
+      const { error: uploadError } = await supabase.storage.from("iconfam-media").upload(path, it.file);
+      if (uploadError) {
+        if (uploaded.length) await supabase.storage.from("iconfam-media").remove(uploaded);
+        setError(`Upload failed for ${it.file.name}: ${uploadError.message}. Nothing was submitted — try again.`);
+        setSubmitting(false);
+        return;
+      }
+      uploaded.push(path);
+      media.push({ path, type: it.kind, source: it.source, lat: it.lat, lng: it.lng });
     }
 
-    for (const file of files) {
-      const path = `${milestone.case_id}/${report.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("iconfam-media")
-        .upload(path, file);
-      if (uploadError) {
-        setError(`Report saved, but one file failed to upload: ${uploadError.message}`);
-        continue;
-      }
-      await supabase.from("media").insert({
-        report_id: report.id,
-        storage_path: path,
-        media_type: file.type.startsWith("video") ? "video" : "image",
-      });
+    const { error: reportError } = await supabase.rpc("submit_field_report", {
+      p_id: reportId,
+      p_milestone: milestone.id,
+      p_findings: findings,
+      p_flag: statusFlag,
+      p_media: media,
+    });
+    if (reportError) {
+      if (uploaded.length) await supabase.storage.from("iconfam-media").remove(uploaded);
+      setError(friendlySubmitError(reportError.message));
+      setSubmitting(false);
+      return;
     }
 
     // Document upload — professional role only, and only when the report genuinely
@@ -187,23 +275,87 @@ export default function SubmitReportPage() {
           />
         </div>
 
-        <div>
-          <label htmlFor="media-files" className="mb-1 block text-sm font-medium text-neutral-600">
-            Photos / video
-          </label>
-          <input
-            id="media-files"
-            type="file"
-            accept="image/*,video/*"
-            capture="environment"
-            multiple
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
-          />
-          {files.length > 0 && (
-            <p className="mt-1 text-xs text-neutral-400">{files.length} file(s) selected</p>
+        {isAgent && (
+          <section aria-labelledby="checkin-h" className="rounded border border-line bg-paper/60 p-4">
+            <h2 id="checkin-h" className="mb-1 text-sm font-semibold text-navy">1. Check in at the site</h2>
+            <p className="mb-3 text-xs text-neutral-500">
+              The camera stays locked until we confirm your phone is at the property or farm.
+            </p>
+            {checkIn?.verified ? (
+              <p role="status" className="text-sm font-medium text-verified">
+                ✓ At the site{checkIn.distance_m !== undefined ? ` (${formatDistance(checkIn.distance_m)} from the marked spot)` : ""}
+              </p>
+            ) : (
+              <>
+                <button type="button" onClick={runCheckIn} disabled={checking}
+                  className="rounded bg-navy px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+                  {checking ? "Checking your location…" : checkIn ? "Check in again" : "Check in at the site"}
+                </button>
+                {checkIn && !checkIn.verified && (
+                  <p role="alert" className="mt-2 text-sm text-stamp">
+                    You are {formatDistance(checkIn.distance_m ?? 0)} from the site. Move to within {formatDistance(checkIn.radius_m ?? 0)} and check in again.
+                  </p>
+                )}
+                {checkError && <p role="alert" className="mt-2 text-sm text-stamp">{checkError}</p>}
+              </>
+            )}
+          </section>
+        )}
+
+        <section aria-labelledby="capture-h" className="rounded border border-line p-4">
+          <h2 id="capture-h" className="mb-1 text-sm font-semibold text-navy">
+            {isAgent ? "2. " : ""}Photos and video
+          </h2>
+          {isAgent && (
+            <p className={`mb-3 text-xs ${needMore > 0 ? "text-stamp" : "text-verified"}`}>
+              Live captures: {liveCount} of {minLive} required
+              {needMore > 0 ? ` — take ${needMore} more at the site` : " ✓"}
+            </p>
           )}
-        </div>
+          {!unlocked && (
+            <p className="mb-3 rounded bg-paper p-3 text-sm text-neutral-500">
+              Locked. Check in at the site to open the camera.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!unlocked} onClick={() => setCameraOpen(true)}
+              className="rounded bg-stamp px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+              Open camera
+            </button>
+            <label className={`rounded border border-line px-4 py-2 text-sm ${unlocked ? "cursor-pointer hover:border-stamp" : "cursor-not-allowed opacity-40"}`}>
+              Use phone camera app
+              <input type="file" accept="image/*,video/*" capture="environment" disabled={!unlocked}
+                onChange={onDeviceCamera} className="sr-only" />
+            </label>
+            <label className={`rounded border border-line px-4 py-2 text-sm ${unlocked ? "cursor-pointer hover:border-stamp" : "cursor-not-allowed opacity-40"}`}>
+              Add from gallery
+              <input type="file" accept="image/*,video/*" multiple disabled={!unlocked}
+                onChange={onGallery} aria-label="Add photos or videos from gallery" className="sr-only" />
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-neutral-400">
+            Add as many as you need. Gallery files are marked as “not taken live” for the reviewer and don’t count toward the minimum.
+          </p>
+          {items.length > 0 && (
+            <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="Selected photos and videos">
+              {items.map((it) => (
+                <li key={it.id} className="relative overflow-hidden rounded border border-line bg-black/5">
+                  {it.kind === "video" ? (
+                    <video src={it.preview} muted playsInline className="h-24 w-full object-cover" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={it.preview} alt="" className="h-24 w-full object-cover" />
+                  )}
+                  <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[10px] text-white ${it.source === "gallery" ? "bg-neutral-600" : "bg-verified"}`}>
+                    {it.source === "gallery" ? "Gallery" : it.kind === "video" ? "Live video" : "Live photo"}
+                  </span>
+                  <button type="button" onClick={() => removeItem(it.id)} aria-label="Remove"
+                    className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs text-white">×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         {profile?.role === "professional" && (
           <div className="rounded border border-line bg-paper/60 p-3">
@@ -233,33 +385,24 @@ export default function SubmitReportPage() {
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-600">Location</label>
-          <button
-            type="button"
-            onClick={captureLocation}
-            disabled={locating}
-            className="rounded border border-line bg-paper px-3 py-2 text-sm hover:border-stamp disabled:opacity-60"
-          >
-            {locating ? "Getting location…" : coords ? "Location captured ✓" : "Capture current location"}
-          </button>
-          {coords && (
-            <p className="mt-1 text-xs text-neutral-400">
-              {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-            </p>
-          )}
-        </div>
-
         {error && <p className="text-sm text-stamp">{error}</p>}
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !unlocked}
           className="w-full rounded bg-stamp py-2.5 text-sm font-semibold text-white hover:bg-stampDark disabled:opacity-60"
         >
           {submitting ? "Submitting…" : "Submit Report"}
         </button>
       </form>
+      {cameraOpen && (
+        <CameraCapture
+          count={items.length}
+          stamp={pos ? `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}` : ""}
+          onClose={() => setCameraOpen(false)}
+          onCapture={(file) => addItems([file], "live", pos)}
+        />
+      )}
     </div>
   );
 }

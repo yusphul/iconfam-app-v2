@@ -65,6 +65,9 @@ export interface Case {
   title: string;
   location_description: string | null;
   assigned_agent_id: string | null;
+  site_lat: number | null;
+  site_lng: number | null;
+  site_radius_m: number;
   deposit_required: boolean;
   quote_total: number | null;
   quote_currency: string | null;
@@ -128,6 +131,7 @@ export interface Report extends Reviewable {
   status_flag: ReportStatusFlag;
   geo_lat: number | null;
   geo_lng: number | null;
+  distance_m: number | null;
   visit_time: string;
   created_at: string;
 }
@@ -137,6 +141,7 @@ export interface MediaItem {
   report_id: string;
   storage_path: string;
   media_type: string;
+  capture_source: "live" | "device_camera" | "gallery" | "legacy";
   captured_at: string;
 }
 
