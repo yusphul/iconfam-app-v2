@@ -274,6 +274,8 @@ export default function LeadDetailPage() {
           <p className="mb-3 text-sm text-neutral-600">
             {visitMode
               ? "Creates the case and one invoice for the full amount. The client pays it before any work or assignment can begin."
+              : pct >= 100
+              ? "Creates the case and one invoice for the full amount. The client pays it before any work or assignment can begin."
               : "Creates the case, a deposit invoice and a balance invoice. The client pays the deposit before any work or assignment can begin."}
           </p>
           <div className="space-y-3">
@@ -356,7 +358,7 @@ export default function LeadDetailPage() {
             )}
             {validQuote && (
               <p className="rounded bg-paper px-3 py-2 text-sm text-neutral-700">
-                Deposit due now: <b>{quoteCurrency} {deposit.toLocaleString()}</b>
+                {pct >= 100 ? "Payment due now (in full)" : "Deposit due now"}: <b>{quoteCurrency} {deposit.toLocaleString()}</b>
                 {totalNum - deposit > 0 && <> · Balance: <b>{quoteCurrency} {(totalNum - deposit).toLocaleString()}</b></>}
               </p>
             )}

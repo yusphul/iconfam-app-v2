@@ -26,6 +26,7 @@ import {
 } from "@/lib/types";
 import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
 import { detectContactInfo } from "@/lib/format";
+import { isFullPayment, invoiceLabel } from "@/lib/paymentWording";
 import { captureSummary, getPosition } from "@/lib/siteCheck";
 import DeleteCaseDialog from "@/components/DeleteCaseDialog";
 import StatusBadge from "@/components/StatusBadge";
@@ -406,7 +407,7 @@ export default function AdminCaseDetail() {
       {caseRow.deposit_required &&
         !payments.some((p) => p.kind === "deposit" && (p.status === "paid" || p.status === "waived")) && (
           <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <b>Waiting for the initial deposit.</b> Work can&apos;t start and no field agent or professional can be
+            <b>{isFullPayment(payments) ? "Waiting for the payment." : "Waiting for the initial deposit."}</b> Work can&apos;t start and no field agent or professional can be
             assigned until it is paid (or waived). See Payments below.
           </p>
         )}

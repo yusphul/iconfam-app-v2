@@ -1,5 +1,6 @@
 "use client";
 
+import { invoiceLabel, isFullPayment } from "@/lib/paymentWording";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Payment } from "@/lib/types";
@@ -31,6 +32,7 @@ export default function PaymentPanel({
   if (payments.length === 0) {
     return <p className="text-sm text-neutral-500">No fees on this case yet.</p>;
   }
+  const full = isFullPayment(payments);
   const depositOutstanding = payments.some(
     (p) => p.kind === "deposit" && p.status !== "paid" && p.status !== "waived"
   );
@@ -43,7 +45,7 @@ export default function PaymentPanel({
           <li key={p.id} className="rounded-xl border border-line bg-paper/60 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm text-neutral-700">{p.description}</p>
+                <p className="text-sm text-neutral-700">{invoiceLabel(p, full)}</p>
                 <p className="font-display text-lg font-semibold tabular-nums text-navy">
                   {money(p.currency, p.amount)}
                 </p>
@@ -67,7 +69,7 @@ export default function PaymentPanel({
                   onClick={() => onOpen(p.id)}
                   className="mt-3 rounded-full bg-stamp px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
                 >
-                  {p.kind === "deposit" ? "Pay deposit" : "Pay now"}
+                  {p.kind === "deposit" && !full ? "Pay deposit" : "Pay now"}
                 </button>
               )
             ) : null}

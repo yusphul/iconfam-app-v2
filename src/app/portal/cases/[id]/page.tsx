@@ -27,6 +27,7 @@ import Disclosure from "@/components/portal/Disclosure";
 import Lightbox, { type LightboxImage } from "@/components/portal/Lightbox";
 import ProgressRing from "@/components/portal/ProgressRing";
 import Skeleton from "@/components/portal/Skeleton";
+import { isFullPayment } from "@/lib/paymentWording";
 import PaymentPanel, { depositState, type PaymentInstructions } from "@/components/journey/PaymentPanel";
 import {
   AlertIcon,
@@ -366,6 +367,7 @@ export default function ClientCaseDetail() {
       {caseRow.deposit_required && (
         <DepositBanner
           state={depositState(payments)}
+          full={isFullPayment(payments)}
           payment={payments.find((p) => p.kind === "deposit")}
           onPay={() => {
             const dep = payments.find((p) => p.kind === "deposit");
@@ -755,10 +757,12 @@ function ReportCard({
 function DepositBanner({
   state,
   payment,
+  full,
   onPay,
 }: {
   state: "none" | "due" | "reported" | "paid";
   payment?: Payment;
+  full?: boolean;
   onPay: () => void;
 }) {
   if (state === "none") return null;
@@ -769,7 +773,7 @@ function DepositBanner({
           <CheckIcon size={20} />
         </span>
         <div>
-          <h2 className="font-display text-lg font-semibold text-navy">Deposit received. Thank you.</h2>
+          <h2 className="font-display text-lg font-semibold text-navy">{full ? "Payment received. Thank you." : "Deposit received. Thank you."}</h2>
           <p className="mt-0.5 text-neutral-700">We&apos;re assigning your team and your steps will appear below.</p>
         </div>
       </section>
@@ -783,11 +787,15 @@ function DepositBanner({
         </span>
         <div>
           <h2 className="font-display text-lg font-semibold text-navy">
-            {state === "reported" ? "We're confirming your deposit" : "Pay your deposit to start"}
+            {state === "reported"
+              ? full ? "We're confirming your payment" : "We're confirming your deposit"
+              : full ? "Pay to start your case" : "Pay your deposit to start"}
           </h2>
           <p className="mt-0.5 max-w-prose text-neutral-700">
             {state === "reported"
               ? "We'll begin as soon as your transfer is confirmed, usually within one business day."
+              : full
+              ? `We begin work as soon as your payment${payment ? ` of ${payment.currency} ${Number(payment.amount).toLocaleString()}` : ""} is received. This is the full fee for this case, so nothing more is charged.`
               : `We begin work as soon as your initial deposit${payment ? ` of ${payment.currency} ${Number(payment.amount).toLocaleString()}` : ""} is received. Nothing else is charged until then.`}
           </p>
         </div>
@@ -798,7 +806,7 @@ function DepositBanner({
           onClick={onPay}
           className="rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
         >
-          Pay deposit
+          {full ? "Pay now" : "Pay deposit"}
         </button>
       )}
     </section>

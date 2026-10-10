@@ -204,6 +204,6 @@ export default function LeadForm({
 export const JOURNEY_STEPS: [string, string][] = [
   ["Tell us what you need", "A few details, two minutes."],
   ["Talk to us", "A 30 or 60 minute call so we understand where you are."],
-  ["Get a scope and fee", "Fixed price. Pay a deposit to start. Nothing before that."],
+  ["Get a scope and fee", "Fixed price. You pay to start. Nothing before that."],
   ["We verify on the ground", "Follow every step, photo and report in your portal."],
 ];

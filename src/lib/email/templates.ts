@@ -205,27 +205,35 @@ export function renderEmail(row: OutboxRow, ctx: RenderContext): Rendered | null
         cta: { label: "Book a new time", url: booking },
       };
       break;
-    case "quote_ready":
+    case "quote_ready": {
+      const full = Number(p.deposit_percent) >= 100;
       b = {
         subject: "Your iConfam quote is ready",
-        preheader: `Deposit due: ${money(p.currency, p.deposit)}`,
+        preheader: full ? `Payment due: ${money(p.currency, p.total)}` : `Deposit due: ${money(p.currency, p.deposit)}`,
         heading: "Your quote is ready",
         paragraphs: [
           `Thank you for speaking with us. We've set up "${caseTitle}" for you.`,
-          "We begin work as soon as your initial deposit is received. Nothing else is charged until then.",
+          full
+            ? "We begin work as soon as your payment is received. This is the full fee for this case, so nothing more is charged."
+            : "We begin work as soon as your initial deposit is received. Nothing else is charged until then.",
         ],
-        facts: [
-          ["Total fee", money(p.currency, p.total)],
-          ["Initial deposit", `${money(p.currency, p.deposit)} (${p.deposit_percent}%)`],
-        ],
-        cta: { label: "View quote and pay deposit", url: portalCase },
+        facts: full
+          ? [["Total fee, due now", money(p.currency, p.total)]]
+          : [
+              ["Total fee", money(p.currency, p.total)],
+              ["Initial deposit", `${money(p.currency, p.deposit)} (${p.deposit_percent}%)`],
+            ],
+        cta: { label: full ? "View quote and pay" : "View quote and pay deposit", url: portalCase },
       };
       break;
-    case "payment_received":
+    }
+    case "payment_received": {
+      const dep = p.kind === "deposit" && !p.full_prepay;
+      const forWhat = p.kind === "deposit" && p.full_prepay ? "Payment in full" : String(p.description ?? "");
       b = {
-        subject: p.kind === "deposit" ? "Deposit received. Thank you" : "Payment received. Thank you",
+        subject: dep ? "Deposit received. Thank you" : "Payment received. Thank you",
         preheader: `${money(p.currency, p.amount)} received for ${caseTitle}`,
-        heading: p.kind === "deposit" ? "We've received your deposit" : "We've received your payment",
+        heading: dep ? "We've received your deposit" : "We've received your payment",
         paragraphs: [
           p.kind === "deposit"
             ? "Thank you. We're now assigning your team and will begin work. You'll see your verification steps appear in your portal."
@@ -233,12 +241,13 @@ export function renderEmail(row: OutboxRow, ctx: RenderContext): Rendered | null
         ],
         facts: [
           ["Case", caseTitle],
-          ["For", String(p.description ?? "")],
+          ["For", forWhat],
           ["Amount", money(p.currency, p.amount)],
         ],
         cta: { label: "Open your case", url: portalCase },
       };
       break;
+    }
     case "report_shared": {
       const doc = p.item === "document";
       b = {
@@ -348,7 +357,7 @@ export function renderEmail(row: OutboxRow, ctx: RenderContext): Rendered | null
         subject: `Payment reported: ${caseTitle}`,
         preheader: `${money(p.currency, p.amount)} via ${p.method}`,
         heading: "A client says they've paid",
-        paragraphs: ["Check your bank for the transfer, then confirm it on the case. Work stays locked until the deposit is confirmed."],
+        paragraphs: ["Check your bank for the transfer, then confirm it on the case. Work stays locked until the first payment is confirmed."],
         facts: [
           ["Case", caseTitle],
           ["For", String(p.description)],
