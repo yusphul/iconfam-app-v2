@@ -5,6 +5,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Payment } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
+import { checkReceiptFile, uploadReceipt } from "@/lib/receiptUpload";
 
 export interface PaymentInstructions {
   bank_usd: string | null;
@@ -57,8 +58,14 @@ export default function PaymentPanel({
               <p className="mt-2 text-sm text-neutral-500">Due after your deposit is confirmed.</p>
             ) : open && p.reported_at ? (
               <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Thanks. We&apos;re confirming your transfer (reference <b>{p.client_reference}</b>). This
-                usually takes one business day.
+                Thanks. We&apos;re confirming your transfer
+                {p.client_reference ? (
+                  <>
+                    {" "}
+                    (reference <b>{p.client_reference}</b>)
+                  </>
+                ) : null}
+                {p.receipt_path ? ", and we have your receipt" : ""}. This usually takes one business day.
               </p>
             ) : open ? (
               openId === p.id ? (
@@ -102,9 +109,12 @@ function PayOptions({
 
   const [tab, setTab] = useState<Tab | null>(tabs[0]?.key ?? null);
   const [reference, setReference] = useState("");
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const details = tab === "bank_usd" ? instructions?.bank_usd : tab === "bank_ngn" ? instructions?.bank_ngn : null;
   const ngnAmount = isUsd && rate ? Math.round(Number(payment.amount) * rate) : Number(payment.amount);
 
   async function payByCard() {
@@ -125,20 +135,54 @@ function PayOptions({
     window.location.href = json.url;
   }
 
+  function pickReceipt(file: File | null) {
+    setError(null);
+    if (preview) URL.revokeObjectURL(preview);
+    if (!file) {
+      setReceipt(null);
+      setPreview(null);
+      return;
+    }
+    const problem = checkReceiptFile(file);
+    if (problem) {
+      setError(problem);
+      setReceipt(null);
+      setPreview(null);
+      return;
+    }
+    setReceipt(file);
+    setPreview(file.type.startsWith("image/") ? URL.createObjectURL(file) : null);
+  }
+
   async function reportTransfer() {
     if (!tab || tab === "card") return;
     setBusy(true);
     setError(null);
+
+    let receiptPath: string | null = null;
+    if (receipt) {
+      const up = await uploadReceipt(payment.case_id, payment.id, receipt);
+      if ("error" in up) {
+        setError(up.error);
+        setBusy(false);
+        return;
+      }
+      receiptPath = up.path;
+    }
+
     const { error: err } = await supabase.rpc("report_payment", {
       p_payment: payment.id,
       p_method: tab,
-      p_reference: reference,
+      p_reference: reference.trim() || null,
+      p_receipt_path: receiptPath,
     });
     setBusy(false);
     if (err) {
       setError(
         err.message.includes("invalid_reference")
-          ? "Enter the reference from your bank transfer (at least 3 characters)."
+          ? "The transaction ID needs at least 3 characters. Or leave it blank and upload your receipt."
+          : err.message.includes("reference_or_receipt_required")
+          ? "Upload your receipt or enter the transaction ID."
           : "We couldn't record that. Please try again."
       );
       return;
@@ -146,11 +190,11 @@ function PayOptions({
     onDone();
   }
 
+  const canSend = !!details && (!!receipt || reference.trim().length >= 3);
+
   if (tabs.length === 0) {
     return <p className="mt-3 text-sm text-neutral-600">Payment details aren&apos;t available yet. We&apos;ll be in touch.</p>;
   }
-
-  const details = tab === "bank_usd" ? instructions?.bank_usd : tab === "bank_ngn" ? instructions?.bank_ngn : null;
 
   return (
     <div className="mt-3 space-y-3 border-t border-line pt-3">
@@ -195,25 +239,80 @@ function PayOptions({
           <pre className="whitespace-pre-wrap rounded-lg border border-line bg-white p-3 font-body text-sm text-navy">
             {details || "Bank details are being set up. Please contact us and we'll send them."}
           </pre>
-          <div>
-            <label htmlFor={`ref-${payment.id}`} className="mb-1 block text-xs font-medium text-neutral-600">
-              After sending, enter your transfer reference
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-neutral-600">After sending, add your proof of payment</p>
+            {receipt ? (
+              <div className="flex items-center gap-3 rounded-lg border border-line bg-white p-2">
+                {preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview} alt="Receipt preview" onError={() => setPreview(null)} className="h-16 w-16 rounded object-cover" />
+                ) : (
+                  <span className="flex h-16 w-16 items-center justify-center rounded bg-paper text-xs font-semibold text-neutral-500">
+                    {receipt.type === "application/pdf" ? "PDF" : "Photo"}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-navy">{receipt.name}</p>
+                  <p className="text-xs text-neutral-500">{(receipt.size / 1024).toFixed(0)} KB</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => pickReceipt(null)}
+                  className="rounded-full border border-line px-3 py-1 text-xs text-neutral-600 hover:bg-paper"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <label className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2.5 text-center text-sm font-medium text-navy hover:border-stamp focus-within:ring-2 focus-within:ring-stamp/25">
+                  Take a photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="sr-only"
+                    aria-label="Take a photo of your receipt"
+                    onChange={(e) => {
+                      pickReceipt(e.target.files?.[0] ?? null);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2.5 text-center text-sm font-medium text-navy hover:border-stamp focus-within:ring-2 focus-within:ring-stamp/25">
+                  Upload receipt
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="sr-only"
+                    aria-label="Upload a receipt or screenshot"
+                    onChange={(e) => {
+                      pickReceipt(e.target.files?.[0] ?? null);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+            )}
+            <p className="text-xs text-neutral-500">A screenshot from your banking app works too. JPG, PNG or PDF, up to 10 MB.</p>
+            <label htmlFor={`ref-${payment.id}`} className="mt-1 block text-xs font-medium text-neutral-600">
+              Transaction ID {receipt ? "(optional)" : "(if you don't have a receipt)"}
             </label>
             <input
               id={`ref-${payment.id}`}
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g. the reference or transaction ID from your bank"
+              placeholder="e.g. the reference from your bank"
               className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
             />
           </div>
           <button
             type="button"
             onClick={reportTransfer}
-            disabled={busy || reference.trim().length < 3 || !details}
+            disabled={busy || !canSend}
             className="rounded-full bg-stamp px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {busy ? "Saving…" : "I've sent the payment"}
+            {busy ? (receipt ? "Uploading…" : "Saving…") : "I've sent the payment"}
           </button>
         </div>
       )}

@@ -363,7 +363,8 @@ export function renderEmail(row: OutboxRow, ctx: RenderContext): Rendered | null
           ["For", String(p.description)],
           ["Amount", money(p.currency, p.amount)],
           ...(p.method === "bank_ngn" ? ([["Naira to expect", `NGN ${Number(p.ngn_amount).toLocaleString("en-US")} at ${p.fx_rate} per USD`]] as [string, string][]) : []),
-          ["Reference", String(p.reference)],
+          ...(p.reference ? ([["Reference", String(p.reference)]] as [string, string][]) : []),
+          ["Receipt", p.has_receipt ? "Attached on the case" : "None uploaded"],
         ],
         cta: { label: "Confirm on the case", url: u(`/admin/cases/${p.case_id}`) },
       };

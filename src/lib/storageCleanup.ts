@@ -15,18 +15,24 @@ async function listAll(bucket: string, prefix: string, depth = 0): Promise<strin
 }
 
 export async function collectCaseFiles(caseId: string) {
-  const [media, documents] = await Promise.all([
+  const [media, documents, receipts] = await Promise.all([
     listAll("iconfam-media", caseId),
     listAll("iconfam-documents", caseId),
+    listAll("iconfam-receipts", caseId),
   ]);
-  return { media, documents };
+  return { media, documents, receipts };
 }
 
-export async function removeCaseFiles(files: { media: string[]; documents: string[] }): Promise<number> {
+export async function removeCaseFiles(files: {
+  media: string[];
+  documents: string[];
+  receipts: string[];
+}): Promise<number> {
   let failed = 0;
   for (const [bucket, paths] of [
     ["iconfam-media", files.media],
     ["iconfam-documents", files.documents],
+    ["iconfam-receipts", files.receipts],
   ] as const) {
     for (let i = 0; i < paths.length; i += 100) {
       const { error } = await supabase.storage.from(bucket).remove(paths.slice(i, i + 100));

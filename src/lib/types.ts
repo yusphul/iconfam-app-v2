@@ -170,6 +170,7 @@ export interface Payment {
   kind: PaymentKind;
   method: PaymentMethod | null;
   client_reference: string | null;
+  receipt_path: string | null;
   reported_at: string | null;
   ngn_amount: number | null;
   fx_rate: number | null;

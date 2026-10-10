@@ -66,7 +66,7 @@ test.describe.serial("Client journey: interest -> call -> quote -> deposit", () 
     await expect(page.getByRole("heading", { name: "Pay your deposit to start" })).toBeVisible();
     await page.getByRole("button", { name: "Pay deposit" }).first().click();
     await expect(page.getByRole("tab", { name: /Bank transfer \(USD\)/ })).toBeVisible();
-    await page.getByLabel(/transfer reference/).fill("E2E-REF-1234");
+    await page.getByLabel(/Transaction ID/).fill("E2E-REF-1234");
     // Disabled until the admin has entered bank details in Settings; that is the intended safeguard.
     const send = page.getByRole("button", { name: "I've sent the payment" });
     if (await send.isEnabled()) {

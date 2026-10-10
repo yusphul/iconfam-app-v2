@@ -55,6 +55,7 @@ export default function AdminCaseDetail() {
   const [finding, setFinding] = useState(false);
   const [places, setPlaces] = useState<{ lat: number; lng: number; label: string }[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [receiptUrls, setReceiptUrls] = useState<Record<string, string>>({});
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({});
   const [usersById, setUsersById] = useState<Record<string, AppUser>>({});
@@ -158,7 +159,20 @@ export default function AdminCaseDetail() {
       .select("*")
       .eq("case_id", id)
       .order("created_at", { ascending: false });
-    setPayments((pay as Payment[]) ?? []);
+    const payList = (pay as Payment[]) ?? [];
+    setPayments(payList);
+    const receiptMap: Record<string, string> = {};
+    await Promise.all(
+      payList
+        .filter((p) => p.receipt_path)
+        .map(async (p) => {
+          const { data: signed } = await supabase.storage
+            .from("iconfam-receipts")
+            .createSignedUrl(p.receipt_path as string, 3600);
+          if (signed?.signedUrl) receiptMap[p.id] = signed.signedUrl;
+        })
+    );
+    setReceiptUrls(receiptMap);
 
     const { data: docs } = await supabase
       .from("documents")
@@ -856,13 +870,37 @@ export default function AdminCaseDetail() {
                         {p.method === "bank_ngn"
                           ? `naira transfer (NGN ${Number(p.ngn_amount ?? 0).toLocaleString()} at ${p.fx_rate}/USD)`
                           : "USD transfer"}
-                        . Reference: <b>{p.client_reference}</b>. Check your bank, then confirm.
+                        .{p.client_reference ? (
+                          <>
+                            {" "}
+                            Reference: <b>{p.client_reference}</b>.
+                          </>
+                        ) : null}{" "}
+                        Check your bank, then confirm.
+                        {receiptUrls[p.id] ? (
+                          <a
+                            href={receiptUrls[p.id]}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 block font-semibold text-amber-900 underline"
+                          >
+                            View receipt
+                          </a>
+                        ) : null}
                       </div>
                     )}
                     {p.status === "paid" && p.method && (
                       <div className="mt-0.5 text-xs text-neutral-400">
                         Paid by {p.method === "card" ? "card" : p.method === "bank_ngn" ? "naira transfer" : "USD transfer"}
                         {p.client_reference ? ` · ${p.client_reference}` : ""}
+                        {receiptUrls[p.id] ? (
+                          <>
+                            {" · "}
+                            <a href={receiptUrls[p.id]} target="_blank" rel="noreferrer" className="underline">
+                              Receipt
+                            </a>
+                          </>
+                        ) : null}
                       </div>
                     )}
                   </div>
