@@ -50,6 +50,9 @@ export default function BookCallPage() {
         <Link href="/" aria-label="iConfam home" className="rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stamp">
           <Logo height={28} />
         </Link>
+        <Link href="/" className="text-sm font-medium text-neutral-600 hover:text-navy hover:underline">
+          Back to iConfam
+        </Link>
       </header>
       <main className="mx-auto max-w-3xl px-4 pb-16 pt-4 sm:px-6">
         {loading ? (
@@ -106,6 +109,9 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
     <div className="rounded-2xl border border-line bg-white p-8 text-center shadow-sm">
       <h1 className="font-display text-xl font-semibold text-navy">{title}</h1>
       <p className="mt-2 text-neutral-600">{children}</p>
+      <Link href="/" className="mt-5 inline-block text-sm font-medium text-stamp hover:underline">
+        Back to iConfam
+      </Link>
     </div>
   );
 }
@@ -395,6 +401,18 @@ function Confirmed({
         <button type="button" onClick={cancel} disabled={busy} className="font-medium text-neutral-500 hover:underline">
           Cancel the call
         </button>
+      </div>
+
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <Link
+          href="/"
+          className="inline-flex items-center rounded-full bg-stamp px-6 py-3 text-sm font-semibold text-white transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+        >
+          Back to iConfam
+        </Link>
+        <Link href="/login?role=client" className="text-sm font-medium text-stamp hover:underline">
+          Sign in to your account
+        </Link>
       </div>
 
       <section className="mt-10">
