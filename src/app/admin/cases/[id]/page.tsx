@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
 import type {
@@ -27,6 +27,7 @@ import {
 import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
 import { detectContactInfo } from "@/lib/format";
 import { captureSummary, getPosition } from "@/lib/siteCheck";
+import DeleteCaseDialog from "@/components/DeleteCaseDialog";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import ReviewControls from "@/components/ReviewControls";
@@ -39,6 +40,8 @@ export default function AdminCaseDetail() {
 
   const [caseRow, setCaseRow] = useState<Case | null>(null);
   const siteSeeded = useRef(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [mediaByReport, setMediaByReport] = useState<Record<string, string[]>>({});
@@ -742,6 +745,51 @@ export default function AdminCaseDetail() {
             {notesSaved && <p className="mt-1 text-xs text-emerald-600">Saved</p>}
           </Section>
 
+          <Section title="Archive or delete">
+            {caseRow.archived_at ? (
+              <div className="mb-4">
+                <p className="mb-2 text-xs text-neutral-500">
+                  Archived on {new Date(caseRow.archived_at).toLocaleDateString()}. It&apos;s hidden from the dashboard and
+                  the active list, and the client can still open it.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => run(supabase.from("cases").update({ archived_at: null }).eq("id", id))}
+                  className="rounded border border-line px-3 py-2 text-sm font-medium hover:border-stamp"
+                >
+                  Restore case
+                </button>
+              </div>
+            ) : caseRow.status === "closed" ? (
+              <div className="mb-4">
+                <p className="mb-2 text-xs text-neutral-500">
+                  Finished with this one? Archiving tidies it away without losing anything. Invoices still count in Payments.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => run(supabase.from("cases").update({ archived_at: new Date().toISOString() }).eq("id", id))}
+                  className="rounded bg-navy px-3 py-2 text-sm font-medium text-white"
+                >
+                  Archive case
+                </button>
+              </div>
+            ) : (
+              <p className="mb-4 text-xs text-neutral-500">
+                Set the status to Closed to be able to archive this case.
+              </p>
+            )}
+            <p className="mb-3 border-t border-line pt-3 text-xs text-neutral-500">
+              For a case that was a mistake or is no longer needed, delete it. This removes it and everything attached to it for good.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDeleting(true)}
+              className="rounded border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Delete case…
+            </button>
+          </Section>
+
           {/* Documents, through the same review gate */}
           <Section title="Documents">
             <ul className="space-y-3">
@@ -866,6 +914,14 @@ export default function AdminCaseDetail() {
           </Section>
         </div>
       </div>
+      {deleting && caseRow && (
+        <DeleteCaseDialog
+          caseId={caseRow.id}
+          title={caseRow.title}
+          onClose={() => setDeleting(false)}
+          onDeleted={() => router.replace("/admin/cases")}
+        />
+      )}
     </div>
   );
 }

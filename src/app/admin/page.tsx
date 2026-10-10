@@ -38,6 +38,7 @@ export default function AdminDashboard() {
       const { data: caseRows } = await supabase
         .from("cases")
         .select("*")
+        .is("archived_at", null)
         .order("updated_at", { ascending: false });
       const caseList = (caseRows as Case[]) ?? [];
       setCases(caseList);

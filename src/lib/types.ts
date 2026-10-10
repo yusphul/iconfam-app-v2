@@ -65,6 +65,7 @@ export interface Case {
   title: string;
   location_description: string | null;
   assigned_agent_id: string | null;
+  archived_at: string | null;
   site_address: string | null;
   site_lat: number | null;
   site_lng: number | null;
