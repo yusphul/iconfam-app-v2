@@ -774,7 +774,7 @@ function DepositBanner({
         </span>
         <div>
           <h2 className="font-display text-lg font-semibold text-navy">{full ? "Payment received. Thank you." : "Deposit received. Thank you."}</h2>
-          <p className="mt-0.5 text-neutral-700">We&apos;re assigning your team and your steps will appear below.</p>
+          <p className="mt-0.5 text-neutral-700">We&apos;re assigning our team and the milestone(s) will appear below.</p>
         </div>
       </section>
     );

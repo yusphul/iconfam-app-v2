@@ -236,7 +236,7 @@ export function renderEmail(row: OutboxRow, ctx: RenderContext): Rendered | null
         heading: dep ? "We've received your deposit" : "We've received your payment",
         paragraphs: [
           p.kind === "deposit"
-            ? "Thank you. We're now assigning your team and will begin work. You'll see your verification steps appear in your portal."
+            ? "Thank you. We're assigning our team and the milestone(s) will appear in your portal."
             : "Thank you. Your payment has been confirmed.",
         ],
         facts: [
