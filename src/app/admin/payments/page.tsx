@@ -298,10 +298,22 @@ export default function PaymentsOverviewPage() {
                       {casesById[p.case_id]?.title ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{p.description}</td>
+                  <td className="px-3 py-2">
+                    {p.description}
+                    {p.reported_at && p.status !== "paid" && p.status !== "waived" && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                        Client says paid{p.receipt_path ? " · receipt" : ""}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 tabular-nums">{p.currency} {Number(p.amount).toLocaleString("en-US")}</td>
                   <td className="px-3 py-2"><StatusBadge kind="payment" value={p.status} /></td>
                   <td className="px-3 py-2">
+                    {p.reported_at && p.status !== "paid" && p.status !== "waived" && (
+                      <Link href={`/admin/cases/${p.case_id}`} className="mr-2 text-xs font-semibold text-stamp hover:underline">
+                        Review
+                      </Link>
+                    )}
                     {p.status !== "paid" && p.status !== "waived" && (
                       <button onClick={() => markPaid(p.id)} className="rounded bg-verified px-2 py-1 text-xs font-medium text-white">
                         Mark paid

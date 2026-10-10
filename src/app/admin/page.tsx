@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import type { Case, CaseStatus, CaseType, Milestone } from "@/lib/types";
+import type { Case, CaseStatus, CaseType, Milestone, Payment } from "@/lib/types";
 import { CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "@/lib/types";
 import { statusStyle } from "@/lib/statusStyles";
 import BarChart from "@/components/BarChart";
@@ -12,8 +12,8 @@ import MilestoneGantt from "@/components/MilestoneGantt";
 const COLUMNS: CaseStatus[] = [
   "intake",
   "scoped",
-  "in_progress",
   "awaiting_client_payment",
+  "in_progress",
   "report_delivered",
   "closed",
 ];
@@ -29,6 +29,7 @@ export default function AdminDashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [milestonesByCase, setMilestonesByCase] = useState<Record<string, Milestone[]>>({});
   const [unpaidCount, setUnpaidCount] = useState(0);
+  const [reportedPayments, setReportedPayments] = useState<Payment[]>([]);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -68,6 +69,15 @@ export default function AdminDashboard() {
         .select("*", { count: "exact", head: true })
         .in("status", ["pending", "overdue"]);
       setUnpaidCount(count ?? 0);
+
+      // Transfers the client says they've made, waiting for the admin to check the bank.
+      const { data: rep } = await supabase
+        .from("payments")
+        .select("*")
+        .not("reported_at", "is", null)
+        .in("status", ["pending", "overdue"])
+        .order("reported_at", { ascending: true });
+      setReportedPayments((rep as Payment[]) ?? []);
 
       // Simple proxy for "unread": messages sent in the last 24h not sent by admin.
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -123,10 +133,49 @@ export default function AdminDashboard() {
         <Link href="/admin/reports" className="block">
           <SummaryCard label="Awaiting your review" value={pendingReviewCount} accent />
         </Link>
+        <Link href="#payments-to-confirm" className="block">
+          <SummaryCard label="Payments to confirm" value={reportedPayments.length} accent />
+        </Link>
         <SummaryCard label="Open cases" value={cases.filter((c) => c.status !== "closed").length} />
         <SummaryCard label="Unpaid / overdue invoices" value={unpaidCount} accent />
         <SummaryCard label="Messages (last 24h)" value={unreadMessageCount} />
       </div>
+
+      {reportedPayments.length > 0 && (
+        <section
+          id="payments-to-confirm"
+          aria-label="Payments to confirm"
+          className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4"
+        >
+          <h2 className="mb-2 text-sm font-semibold text-amber-900">
+            {reportedPayments.length} payment{reportedPayments.length === 1 ? "" : "s"} to confirm
+          </h2>
+          <ul className="divide-y divide-amber-200">
+            {reportedPayments.map((p) => {
+              const c = cases.find((x) => x.id === p.case_id);
+              return (
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium text-navy">{c?.title ?? "Case"}</span>
+                    <span className="text-neutral-600">
+                      {" "}
+                      · {p.currency} {Number(p.amount).toLocaleString("en-US")} ·{" "}
+                      {p.receipt_path ? "receipt uploaded" : p.client_reference ? `ref ${p.client_reference}` : "reported"}
+                      {p.reported_at ? ` · ${new Date(p.reported_at).toLocaleDateString()}` : ""}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/admin/cases/${p.case_id}`}
+                    className="rounded-full bg-stamp px-3 py-1 text-xs font-semibold text-white hover:bg-stampDark"
+                  >
+                    Review and confirm
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {COLUMNS.map((status) => (
@@ -151,6 +200,11 @@ export default function AdminDashboard() {
                   >
                     <div className="font-medium text-navy">{c.title}</div>
                     <div className="text-neutral-500">{CASE_TYPE_LABELS[c.case_type]}</div>
+                    {reportedPayments.some((p) => p.case_id === c.id) && (
+                      <div className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                        Payment reported
+                      </div>
+                    )}
                   </Link>
                 ))}
               {cases.filter((c) => c.status === status).length === 0 && (

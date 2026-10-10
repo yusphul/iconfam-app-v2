@@ -22,13 +22,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const { profile, signOut } = useAuth();
   const [pending, setPending] = useState(0);
   const [openLeads, setOpenLeads] = useState(0);
+  const [toConfirm, setToConfirm] = useState(0);
 
   // Count of reports + documents waiting for the admin's approval, shown on
   // the Review Queue tab. Refreshed whenever the admin moves between pages.
   useEffect(() => {
     let cancelled = false;
     async function loadPending() {
-      const [{ count: r }, { count: d }, { count: l }] = await Promise.all([
+      const [{ count: r }, { count: d }, { count: l }, { count: pc }] = await Promise.all([
         supabase
           .from("reports")
           .select("*", { count: "exact", head: true })
@@ -41,15 +42,24 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           .from("leads")
           .select("*", { count: "exact", head: true })
           .in("stage", ["new", "call_booked", "call_done"]),
+        supabase
+          .from("payments")
+          .select("*", { count: "exact", head: true })
+          .not("reported_at", "is", null)
+          .in("status", ["pending", "overdue"]),
       ]);
       if (!cancelled) {
         setPending((r ?? 0) + (d ?? 0));
         setOpenLeads(l ?? 0);
+        setToConfirm(pc ?? 0);
       }
     }
     loadPending();
+    // Check again every minute so a new payment report shows up without a refresh.
+    const timer = setInterval(loadPending, 60_000);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
   }, [pathname]);
 
@@ -88,6 +98,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 {item.href === "/admin/leads" && openLeads > 0 && (
                   <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
                     {openLeads}
+                  </span>
+                )}
+                {item.href === "/admin/payments" && toConfirm > 0 && (
+                  <span
+                    aria-label={`${toConfirm} payment${toConfirm === 1 ? "" : "s"} to confirm`}
+                    className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                  >
+                    {toConfirm}
                   </span>
                 )}
                 {item.href === "/admin/reports" && pending > 0 && (
