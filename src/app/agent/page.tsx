@@ -8,6 +8,7 @@ import type { Case, Milestone, Report } from "@/lib/types";
 import { CASE_TYPE_LABELS } from "@/lib/types";
 import { statusStyle } from "@/lib/statusStyles";
 import { timeAgo } from "@/lib/format";
+import { assigneeChip, canWorkMilestone } from "@/lib/milestoneAssignment";
 import StatusBadge from "@/components/StatusBadge";
 
 export default function AgentHomePage() {
@@ -136,15 +137,22 @@ export default function AgentHomePage() {
             <ul className="space-y-1">
               {(milestonesByCase[c.id] ?? []).map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span>{m.name}</span>
+                  <span>
+                    {m.name}
+                    {assigneeChip(m, profile?.id) && (
+                      <span className="ml-2 text-[11px] text-neutral-500">{assigneeChip(m, profile?.id)}</span>
+                    )}
+                  </span>
                   <div className="flex items-center gap-2">
                     <StatusBadge kind="milestone" value={m.status} />
-                    <Link
-                      href={`/agent/submit/${m.id}`}
-                      className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
-                    >
-                      Submit report
-                    </Link>
+                    {canWorkMilestone(m, profile?.id) && (
+                      <Link
+                        href={`/agent/submit/${m.id}`}
+                        className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
+                      >
+                        Submit report
+                      </Link>
+                    )}
                   </div>
                 </li>
               ))}

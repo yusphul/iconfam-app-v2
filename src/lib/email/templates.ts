@@ -322,6 +322,17 @@ export function renderEmail(row: OutboxRow, ctx: RenderContext): Rendered | null
       };
       break;
 
+    case "milestone_assigned":
+      b = {
+        subject: `A milestone is assigned to you: ${caseTitle}`,
+        preheader: String(p.step ?? ""),
+        heading: "A milestone is assigned to you",
+        paragraphs: [`You are responsible for "${String(p.step ?? "this milestone")}" on "${caseTitle}".`],
+        facts: [["Milestone", String(p.step ?? "")], ["Case", caseTitle], ["Type", service]],
+        cta: { label: "Open the case", url: staffCase },
+      };
+      break;
+
     // ---------- admins ----------
     case "admin_new_lead":
       b = {

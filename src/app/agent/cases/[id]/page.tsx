@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
-import type { Case, Milestone, Report } from "@/lib/types";
-import { CASE_TYPE_LABELS } from "@/lib/types";
+import type { Case, CaseStatus, Milestone, MilestoneStatus, Report } from "@/lib/types";
+import { CASE_STATUS_LABELS, CASE_TYPE_LABELS, MILESTONE_STATUS_LABELS } from "@/lib/types";
 import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
 import { timeAgo } from "@/lib/format";
+import { assigneeChip, canWorkMilestone } from "@/lib/milestoneAssignment";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import MessageThread from "@/components/MessageThread";
@@ -31,6 +32,10 @@ export default function AgentCaseDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const isProfessional = profile?.role === "professional";
+  const [saving, setSaving] = useState<string | null>(null);
+
+  // What the field team may set. Intake, scoping, payment and closing stay with the admin.
+  const FIELD_STATUSES: CaseStatus[] = ["in_progress", "on_hold", "report_delivered"];
 
   const load = useCallback(async () => {
     const { data: c } = await supabase.from("cases").select("*").eq("id", id).maybeSingle();
@@ -63,6 +68,30 @@ export default function AgentCaseDetail() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function changeCaseStatus(next: CaseStatus) {
+    setSaving("case");
+    setError(null);
+    const { error: err } = await supabase.rpc("set_case_status", { p_case: id, p_status: next });
+    setSaving(null);
+    if (err) {
+      setError(
+        err.message.includes("deposit_required")
+          ? "This case can't start until the client's payment is confirmed."
+          : "You can't set that status. Ask the admin team."
+      );
+    }
+    load();
+  }
+
+  async function changeMilestoneStatus(milestoneId: string, next: MilestoneStatus) {
+    setSaving(milestoneId);
+    setError(null);
+    const { error: err } = await supabase.from("milestones").update({ status: next }).eq("id", milestoneId);
+    setSaving(null);
+    if (err) setError("We couldn't update that milestone. Please try again.");
+    load();
+  }
 
   async function addMilestone(e: React.FormEvent) {
     e.preventDefault();
@@ -114,8 +143,41 @@ export default function AgentCaseDetail() {
               {caseRow.location_description ? ` · ${caseRow.location_description}` : ""}
             </p>
           </div>
-          <StatusBadge kind="case" value={caseRow.status} />
+          <div className="flex items-center gap-2">
+            {!["intake", "scoped", "closed"].includes(caseRow.status) ? (
+              <>
+                <label htmlFor="case-status" className="text-xs font-medium text-neutral-500">
+                  Case status
+                </label>
+                <select
+                  id="case-status"
+                  value={caseRow.status}
+                  disabled={saving === "case"}
+                  onChange={(e) => changeCaseStatus(e.target.value as CaseStatus)}
+                  className="rounded border border-line bg-white px-2 py-1.5 text-sm"
+                >
+                  {!FIELD_STATUSES.includes(caseRow.status) && (
+                    <option value={caseRow.status} disabled>
+                      {CASE_STATUS_LABELS[caseRow.status]}
+                    </option>
+                  )}
+                  {FIELD_STATUSES.map((st) => (
+                    <option key={st} value={st}>
+                      {CASE_STATUS_LABELS[st]}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <StatusBadge kind="case" value={caseRow.status} />
+            )}
+          </div>
         </div>
+        {error && (
+          <p role="alert" className="mt-2 text-sm text-red-600">
+            {error}
+          </p>
+        )}
       </div>
 
       {profile.role === "agent" && (
@@ -151,15 +213,38 @@ export default function AgentCaseDetail() {
                     </span>
                     <span className="font-medium text-navy">{m.name}</span>
                     {m.owner_label && <span className={LABEL_CHIP}>{m.owner_label}</span>}
+                    {assigneeChip(m, profile.id) && (
+                      <span className={m.assigned_to === profile.id ? "rounded-full bg-stamp/10 px-2 py-0.5 text-[11px] font-semibold text-stampDark" : LABEL_CHIP}>
+                        {assigneeChip(m, profile.id)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <StatusBadge kind="milestone" value={m.status} />
+                    {!canWorkMilestone(m, profile.id) ? (
+                      <StatusBadge kind="milestone" value={m.status} />
+                    ) : (
+                    <>
+                    <select
+                      aria-label={`Status of ${m.name}`}
+                      value={m.status}
+                      disabled={saving === m.id}
+                      onChange={(e) => changeMilestoneStatus(m.id, e.target.value as MilestoneStatus)}
+                      className="rounded border border-line bg-white px-2 py-1 text-xs"
+                    >
+                      {Object.entries(MILESTONE_STATUS_LABELS).map(([k, label]) => (
+                        <option key={k} value={k}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
                     <Link
                       href={`/agent/submit/${m.id}`}
                       className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
                     >
                       Submit report
                     </Link>
+                    </>
+                    )}
                   </div>
                 </div>
 
@@ -211,7 +296,6 @@ export default function AgentCaseDetail() {
             </button>
           </form>
         )}
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </Section>
 
       <Section title="Messages to admin">

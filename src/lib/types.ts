@@ -109,6 +109,9 @@ export interface Milestone {
   // Who added it, as a role label ("Lawyer", "iConfam team") — never a name.
   created_by: string | null;
   owner_label: string | null;
+  // The one team member this milestone is assigned to (null = anyone on the case team).
+  assigned_to: string | null;
+  assigned_label: string | null;
   created_at: string;
 }
 

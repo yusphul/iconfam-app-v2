@@ -235,6 +235,19 @@ export default function SubmitReportPage() {
 
   if (!milestone) return <p className="text-sm text-neutral-500">Loading…</p>;
 
+  if (profile && milestone.assigned_to && milestone.assigned_to !== profile.id) {
+    return (
+      <div>
+        <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>
+        <h1 className="mb-1 font-display text-xl font-bold text-navy">Submit Report</h1>
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          This milestone is assigned to {milestone.assigned_label ?? "another team member"}. Only they can send a
+          report for it. Message the admin team if this looks wrong.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>

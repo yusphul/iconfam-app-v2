@@ -372,6 +372,18 @@ export default function AdminCaseDetail() {
     return grouped;
   }, [reports]);
 
+  // Who a milestone can be assigned to: the field agent and the professionals on this case.
+  const team = useMemo(() => {
+    const list: { id: string; label: string }[] = [];
+    const agent = caseRow?.assigned_agent_id ? usersById[caseRow.assigned_agent_id] : null;
+    if (agent) list.push({ id: agent.id, label: `Field agent — ${agent.full_name}` });
+    for (const a of assigned) {
+      const p = usersById[a.professional_id];
+      if (p) list.push({ id: p.id, label: `${roleLabel(p)} — ${p.full_name}` });
+    }
+    return list;
+  }, [caseRow, assigned, usersById]);
+
   // Everyone the admin can hold a private conversation with on this case.
   const threads = useMemo(() => {
     const list: { id: string; label: string }[] = [];
@@ -649,7 +661,25 @@ export default function AdminCaseDetail() {
                         <span className="font-medium text-navy">{m.name}</span>
                         {m.owner_label && <span className={LABEL_CHIP}>{m.owner_label}</span>}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          aria-label={`Assigned to for ${m.name}`}
+                          value={m.assigned_to ?? ""}
+                          onChange={(e) =>
+                            run(supabase.from("milestones").update({ assigned_to: e.target.value || null }).eq("id", m.id))
+                          }
+                          className="max-w-[14rem] rounded border border-line bg-white px-2 py-1 text-xs"
+                        >
+                          <option value="">Anyone on the team</option>
+                          {team.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.label}
+                            </option>
+                          ))}
+                          {m.assigned_to && !team.some((t) => t.id === m.assigned_to) && (
+                            <option value={m.assigned_to}>{m.assigned_label ?? "Former team member"}</option>
+                          )}
+                        </select>
                         <StatusBadge kind="milestone" value={m.status} />
                         <select
                           aria-label={`Status of ${m.name}`}
