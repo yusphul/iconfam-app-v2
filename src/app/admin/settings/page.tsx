@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { buildVisitQuote, fieldCostNgn, type VisitZone } from "@/lib/visitPricing";
+import { SPECIALTY_LABELS, type ProfessionalSpecialty } from "@/lib/types";
 
 interface Settings {
   timezone: string;
@@ -15,6 +16,7 @@ interface Settings {
   usd_to_ngn_rate: number | null;
   visit_fee_usd: number;
   min_site_captures: number;
+  site_check_specialties: string[] | null;
 }
 interface OutboxItem {
   id: string;
@@ -82,6 +84,7 @@ export default function SettingsPage() {
         usd_to_ngn_rate: s.usd_to_ngn_rate ? Number(s.usd_to_ngn_rate) : null,
         visit_fee_usd: Number(s.visit_fee_usd) || 0,
         min_site_captures: Math.min(20, Math.max(1, Math.round(Number(s.min_site_captures) || 3))),
+        site_check_specialties: s.site_check_specialties ?? [],
         updated_at: new Date().toISOString(),
       })
       .eq("id", true);
@@ -199,6 +202,28 @@ export default function SettingsPage() {
           </Field>
           <p className="mt-1 text-xs text-neutral-500">Field agents can't submit a report until they have taken this many at the site.</p>
         </div>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-semibold text-navy">Professionals who must check in at the site</legend>
+          <p className="mb-2 text-xs text-neutral-500">Field agents always check in. Tick the specialties that must also be at the site before they report. Leave desk-based ones, such as lawyers, unticked.</p>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {(Object.keys(SPECIALTY_LABELS) as ProfessionalSpecialty[]).map((sp) => {
+              const on = (s.site_check_specialties ?? []).includes(sp);
+              return (
+                <label key={sp} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) => {
+                      const cur = s.site_check_specialties ?? [];
+                      setS({ ...s, site_check_specialties: e.target.checked ? [...cur, sp] : cur.filter((x) => x !== sp) });
+                    }}
+                  />
+                  {SPECIALTY_LABELS[sp]}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
         <h3 className="mb-2 mt-5 text-sm font-semibold text-navy">Field costs per visit (₦)</h3>
         <div className="space-y-4">
           {zones.map((z) => {

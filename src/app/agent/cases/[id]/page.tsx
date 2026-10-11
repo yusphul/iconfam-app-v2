@@ -1,5 +1,6 @@
 "use client";
 
+import { useSiteCheckRequired } from "@/lib/useSiteCheckRequired";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -35,6 +36,7 @@ export default function AgentCaseDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const isProfessional = profile?.role === "professional";
+  const needsSite = useSiteCheckRequired(profile?.role, profile?.id) === true;
   const [saving, setSaving] = useState<string | null>(null);
 
   // What the field team may set. Intake, scoping, payment and closing stay with the admin.
@@ -187,7 +189,7 @@ export default function AgentCaseDetail() {
         )}
       </div>
 
-      {profile.role === "agent" && (
+      {needsSite && (
         <p
           role="status"
           className={`rounded border px-3 py-2 text-sm ${

@@ -8,6 +8,7 @@ import type { Milestone, ReportStatusFlag } from "@/lib/types";
 import { REPORT_FLAG_LABELS } from "@/lib/types";
 import BackLink from "@/components/BackLink";
 import { canSubmitReport } from "@/lib/reportMedia";
+import { useSiteCheckRequired } from "@/lib/useSiteCheckRequired";
 import CameraCapture from "@/components/agent/CameraCapture";
 import {
   CheckInResult,
@@ -52,8 +53,9 @@ export default function SubmitReportPage() {
   const itemsRef = useRef<Item[]>([]);
   itemsRef.current = items;
 
-  const isAgent = profile?.role === "agent";
-  // Professionals and admins are not site-gated; field agents are.
+  // Field agents, and professionals whose specialty the admin marked as "must visit the site",
+  // check in and take live photos. Lawyers and other desk-based specialists don't.
+  const isAgent = useSiteCheckRequired(profile?.role, profile?.id) === true;
   const unlocked = !isAgent || (checkIn?.verified ?? false);
   const minLive = isAgent ? checkIn?.min_captures ?? 3 : 0;
   const liveCount = items.filter((i) => i.source !== "gallery").length;
