@@ -11,7 +11,6 @@ import type {
   Milestone,
   MilestoneStatus,
   Report,
-  MediaItem,
   Payment,
   AppUser,
   CaseStatus,
@@ -32,6 +31,8 @@ import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
 import { detectContactInfo } from "@/lib/format";
 import { isFullPayment, invoiceLabel } from "@/lib/paymentWording";
 import { captureSummary, getPosition } from "@/lib/siteCheck";
+import { loadReportMedia, type MediaView } from "@/lib/reportMedia";
+import ReportMedia from "@/components/ReportMedia";
 import DeleteCaseDialog from "@/components/DeleteCaseDialog";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
@@ -49,7 +50,7 @@ export default function AdminCaseDetail() {
   const router = useRouter();
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [mediaByReport, setMediaByReport] = useState<Record<string, string[]>>({});
+  const [mediaByReport, setMediaByReport] = useState<Record<string, MediaView[]>>({});
   const [noteByReport, setNoteByReport] = useState<Record<string, string>>({});
   const [siteLat, setSiteLat] = useState("");
   const [siteLng, setSiteLng] = useState("");
@@ -132,28 +133,12 @@ export default function AdminCaseDetail() {
       const reportList = (rp as Report[]) ?? [];
       setReports(reportList);
 
-      const mediaMap: Record<string, string[]> = {};
+      const { views: mediaMap, rows: mediaRowsByReport } = await loadReportMedia(reportList.map((r) => r.id));
       const noteMap: Record<string, string> = {};
-      await Promise.all(
-        reportList.map(async (report) => {
-          const { data: mediaRows } = await supabase
-            .from("media")
-            .select("*")
-            .eq("report_id", report.id);
-          const rows = (mediaRows as MediaItem[]) ?? [];
-          if (rows.length === 0) return;
-          noteMap[report.id] = captureSummary(report.distance_m, rows);
-          const { data: signed } = await supabase.storage
-            .from("iconfam-media")
-            .createSignedUrls(
-              rows.map((m) => m.storage_path),
-              3600
-            );
-          mediaMap[report.id] = (signed ?? [])
-            .map((s) => s.signedUrl)
-            .filter((u): u is string => Boolean(u));
-        })
-      );
+      for (const report of reportList) {
+        const rows = mediaRowsByReport[report.id];
+        if (rows) noteMap[report.id] = captureSummary(report.distance_m, rows);
+      }
       setMediaByReport(mediaMap);
       setNoteByReport(noteMap);
     } else {
@@ -722,20 +707,7 @@ export default function AdminCaseDetail() {
                             {noteByReport[r.id] && (
                               <p className="mt-2 text-xs font-medium text-neutral-600">{noteByReport[r.id]}</p>
                             )}
-                            {mediaByReport[r.id]?.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {mediaByReport[r.id].map((url, idx) => (
-                                  <a key={idx} href={url} target="_blank" rel="noreferrer">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={url}
-                                      alt="Field evidence"
-                                      className="h-20 w-20 rounded border border-line object-cover"
-                                    />
-                                  </a>
-                                ))}
-                              </div>
-                            )}
+                            <ReportMedia media={mediaByReport[r.id] ?? []} />
                             <ReviewControls
                               table="reports"
                               id={r.id}

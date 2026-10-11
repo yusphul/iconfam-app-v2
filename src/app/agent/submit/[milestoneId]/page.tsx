@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthProvider";
 import type { Milestone, ReportStatusFlag } from "@/lib/types";
 import { REPORT_FLAG_LABELS } from "@/lib/types";
 import BackLink from "@/components/BackLink";
+import { canSubmitReport } from "@/lib/reportMedia";
 import CameraCapture from "@/components/agent/CameraCapture";
 import {
   CheckInResult,
@@ -57,6 +58,18 @@ export default function SubmitReportPage() {
   const minLive = isAgent ? checkIn?.min_captures ?? 3 : 0;
   const liveCount = items.filter((i) => i.source !== "gallery").length;
   const needMore = Math.max(0, minLive - liveCount);
+
+  // Already sent a report here? Then the form is closed unless the admin rejected it.
+  const [alreadySent, setAlreadySent] = useState(false);
+  useEffect(() => {
+    if (!profile) return;
+    supabase
+      .from("reports")
+      .select("review_status")
+      .eq("milestone_id", milestoneId)
+      .eq("submitted_by", profile.id)
+      .then(({ data }) => setAlreadySent(!canSubmitReport((data as { review_status: string }[] | null) ?? [])));
+  }, [milestoneId, profile]);
 
   useEffect(() => {
     async function load() {
@@ -234,6 +247,19 @@ export default function SubmitReportPage() {
   }
 
   if (!milestone) return <p className="text-sm text-neutral-500">Loading…</p>;
+
+  if (alreadySent && !submitting) {
+    return (
+      <div>
+        <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>
+        <h1 className="mb-1 font-display text-xl font-bold text-navy">Submit Report</h1>
+        <p role="status" className="rounded border border-line bg-paper px-3 py-2 text-sm text-neutral-700">
+          You already sent a report for &ldquo;{milestone.name}&rdquo;. It is with the admin team for review. You can
+          send another only if they reject it.
+        </p>
+      </div>
+    );
+  }
 
   if (profile && milestone.assigned_to && milestone.assigned_to !== profile.id) {
     return (

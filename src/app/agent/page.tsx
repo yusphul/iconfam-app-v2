@@ -9,6 +9,7 @@ import { CASE_TYPE_LABELS } from "@/lib/types";
 import { statusStyle } from "@/lib/statusStyles";
 import { timeAgo } from "@/lib/format";
 import { assigneeChip, canWorkMilestone } from "@/lib/milestoneAssignment";
+import { canSubmitReport } from "@/lib/reportMedia";
 import StatusBadge from "@/components/StatusBadge";
 
 export default function AgentHomePage() {
@@ -17,6 +18,7 @@ export default function AgentHomePage() {
   const [milestonesByCase, setMilestonesByCase] = useState<Record<string, Milestone[]>>({});
   const [rejectedByCase, setRejectedByCase] = useState<Record<string, number>>({});
   const [pendingByCase, setPendingByCase] = useState<Record<string, number>>({});
+  const [mineByMilestone, setMineByMilestone] = useState<Record<string, { review_status: string }[]>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,6 +81,11 @@ export default function AgentHomePage() {
             if (r.review_status === "rejected") rejected[caseId] = (rejected[caseId] ?? 0) + 1;
             if (r.review_status === "pending") pending[caseId] = (pending[caseId] ?? 0) + 1;
           });
+          const mine: Record<string, { review_status: string }[]> = {};
+          ((rp as Pick<Report, "id" | "milestone_id" | "review_status">[]) ?? []).forEach((r) => {
+            (mine[r.milestone_id] ??= []).push({ review_status: r.review_status });
+          });
+          setMineByMilestone(mine);
           setRejectedByCase(rejected);
           setPendingByCase(pending);
         }
@@ -145,14 +152,17 @@ export default function AgentHomePage() {
                   </span>
                   <div className="flex items-center gap-2">
                     <StatusBadge kind="milestone" value={m.status} />
-                    {canWorkMilestone(m, profile?.id) && (
-                      <Link
-                        href={`/agent/submit/${m.id}`}
-                        className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
-                      >
-                        Submit report
-                      </Link>
-                    )}
+                    {canWorkMilestone(m, profile?.id) &&
+                      (canSubmitReport(mineByMilestone[m.id] ?? []) ? (
+                        <Link
+                          href={`/agent/submit/${m.id}`}
+                          className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
+                        >
+                          {(mineByMilestone[m.id] ?? []).length > 0 ? "Resubmit report" : "Submit report"}
+                        </Link>
+                      ) : (
+                        <span className="text-xs font-medium text-neutral-500">Report sent</span>
+                      ))}
                   </div>
                 </li>
               ))}

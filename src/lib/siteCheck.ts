@@ -47,6 +47,10 @@ export function friendlySubmitError(message: string): string {
   if (/not_checked_in/.test(message))
     return "Your site check-in has expired or wasn't verified. Check in at the site again, then submit.";
   if (/not_enough_captures/.test(message)) return message.replace(/^.*?:\s*/, "");
+  if (/report_already_submitted/.test(message))
+    return "You already sent a report for this milestone. You can send another only if the admin rejects it.";
+  if (/milestone_assigned_to_someone_else/.test(message))
+    return "This milestone is assigned to another team member.";
   if (/invalid_media_path/.test(message)) return "A file was uploaded to the wrong place. Remove it and add it again.";
   return message;
 }

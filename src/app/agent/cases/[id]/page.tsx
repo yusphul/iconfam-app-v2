@@ -10,6 +10,8 @@ import { CASE_STATUS_LABELS, CASE_TYPE_LABELS, MILESTONE_STATUS_LABELS } from "@
 import { statusStyle, LABEL_CHIP } from "@/lib/statusStyles";
 import { timeAgo } from "@/lib/format";
 import { assigneeChip, canWorkMilestone } from "@/lib/milestoneAssignment";
+import { canSubmitReport, loadReportMedia, type MediaView } from "@/lib/reportMedia";
+import ReportMedia from "@/components/ReportMedia";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import MessageThread from "@/components/MessageThread";
@@ -26,6 +28,7 @@ export default function AgentCaseDetail() {
   const [caseRow, setCaseRow] = useState<Case | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [mediaByReport, setMediaByReport] = useState<Record<string, MediaView[]>>({});
   const [loading, setLoading] = useState(true);
   const [newMilestone, setNewMilestone] = useState("");
   const [adding, setAdding] = useState(false);
@@ -58,9 +61,13 @@ export default function AgentCaseDetail() {
           milestoneList.map((m) => m.id)
         )
         .order("created_at", { ascending: false });
-      setReports((rp as Report[]) ?? []);
+      const reportList = (rp as Report[]) ?? [];
+      setReports(reportList);
+      const { views } = await loadReportMedia(reportList.map((r) => r.id));
+      setMediaByReport(views);
     } else {
       setReports([]);
+      setMediaByReport({});
     }
     setLoading(false);
   }, [id]);
@@ -237,12 +244,16 @@ export default function AgentCaseDetail() {
                         </option>
                       ))}
                     </select>
-                    <Link
-                      href={`/agent/submit/${m.id}`}
-                      className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
-                    >
-                      Submit report
-                    </Link>
+                    {canSubmitReport(mine) ? (
+                      <Link
+                        href={`/agent/submit/${m.id}`}
+                        className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
+                      >
+                        {mine.length > 0 ? "Resubmit report" : "Submit report"}
+                      </Link>
+                    ) : (
+                      <span className="text-xs font-medium text-neutral-500">Report sent</span>
+                    )}
                     </>
                     )}
                   </div>
@@ -260,6 +271,7 @@ export default function AgentCaseDetail() {
                           <span className="text-xs text-neutral-400">{timeAgo(r.created_at)}</span>
                         </div>
                         <p className="text-neutral-700">{r.findings_summary}</p>
+                        <ReportMedia media={mediaByReport[r.id] ?? []} />
                         {r.review_status === "rejected" && r.review_note && (
                           <p className="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
                             <span className="font-semibold">Admin feedback: </span>
