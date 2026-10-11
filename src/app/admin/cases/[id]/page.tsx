@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/AuthProvider";
@@ -15,11 +16,14 @@ import type {
   AppUser,
   CaseStatus,
   DocumentRow,
+  Lead,
+  LeadIntake,
   ProfessionalSpecialty,
 } from "@/lib/types";
 import {
   CASE_STATUS_LABELS,
   CASE_TYPE_LABELS,
+  INTAKE_PROCESS_LABELS,
   MILESTONE_STATUS_LABELS,
   SPECIALTY_LABELS,
   roleLabel,
@@ -55,6 +59,8 @@ export default function AdminCaseDetail() {
   const [finding, setFinding] = useState(false);
   const [places, setPlaces] = useState<{ lat: number; lng: number; label: string }[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [sourceLead, setSourceLead] = useState<Lead | null>(null);
+  const [sourceIntake, setSourceIntake] = useState<LeadIntake | null>(null);
   const [receiptUrls, setReceiptUrls] = useState<Record<string, string>>({});
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({});
@@ -173,6 +179,21 @@ export default function AdminCaseDetail() {
         })
     );
     setReceiptUrls(receiptMap);
+
+    // The request this case came from, and what was learned on the intake call.
+    // Both are private to admins, so they live here and not on the client's view.
+    const { data: leadRow } = await supabase.from("leads").select("*").eq("converted_case_id", id).maybeSingle();
+    setSourceLead((leadRow as Lead | null) ?? null);
+    if (leadRow) {
+      const { data: intakeRow } = await supabase
+        .from("lead_intake")
+        .select("*")
+        .eq("lead_id", (leadRow as Lead).id)
+        .maybeSingle();
+      setSourceIntake((intakeRow as LeadIntake | null) ?? null);
+    } else {
+      setSourceIntake(null);
+    }
 
     const { data: docs } = await supabase
       .from("documents")
@@ -428,6 +449,30 @@ export default function AdminCaseDetail() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {/* What the client asked for and what we learned on the intake call */}
+          {sourceLead && (
+            <Section title="Request and intake call (admin only)">
+              <div className="space-y-3 text-sm">
+                <IntakeRow label="Request" value={sourceLead.summary} />
+                <IntakeRow label="Details from the client" value={sourceLead.details} />
+                <IntakeRow
+                  label="Where they are in the process"
+                  value={sourceIntake?.process_stage ? INTAKE_PROCESS_LABELS[sourceIntake.process_stage] : null}
+                />
+                <IntakeRow label="Documents they already hold" value={sourceIntake?.documents_held} />
+                <IntakeRow label="What they want to achieve" value={sourceIntake?.goal} />
+                <IntakeRow label="Deadline" value={sourceIntake?.deadline} />
+                <IntakeRow label="Other notes from the call" value={sourceIntake?.notes} />
+                {!sourceIntake && (
+                  <p className="text-neutral-400">No call notes were saved on the lead.</p>
+                )}
+                <Link href={`/admin/leads/${sourceLead.id}`} className="inline-block text-xs font-semibold text-stamp hover:underline">
+                  Open the original lead
+                </Link>
+              </div>
+            </Section>
+          )}
+
           {/* Status + assignment */}
           <Section title="Status & Assignment">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1005,6 +1050,16 @@ function LabeledSelect({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function IntakeRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <div>
+      <div className="text-xs font-medium text-neutral-500">{label}</div>
+      <p className="whitespace-pre-wrap text-neutral-800">{value}</p>
     </div>
   );
 }
