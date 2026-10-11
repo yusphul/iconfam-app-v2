@@ -255,39 +255,6 @@ export default function SubmitReportPage() {
       <p className="mb-6 text-sm text-neutral-500">Milestone: {milestone.name}</p>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-line bg-white p-6">
-        <div>
-          <label htmlFor="status-flag" className="mb-1 block text-sm font-medium text-neutral-600">
-            Status
-          </label>
-          <select
-            id="status-flag"
-            value={statusFlag}
-            onChange={(e) => setStatusFlag(e.target.value as ReportStatusFlag)}
-            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
-          >
-            {Object.entries(REPORT_FLAG_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="findings" className="mb-1 block text-sm font-medium text-neutral-600">
-            Findings — plain language, exactly what you saw
-          </label>
-          <textarea
-            id="findings"
-            required
-            rows={5}
-            value={findings}
-            onChange={(e) => setFindings(e.target.value)}
-            placeholder="e.g. Visited the site at [address]. Foundation is complete and matches the approved plan. Spoke with the site foreman, [name]. No discrepancies found."
-            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
-          />
-        </div>
-
         {isAgent && (
           <section aria-labelledby="checkin-h" className="rounded border border-line bg-paper/60 p-4">
             <h2 id="checkin-h" className="mb-1 text-sm font-semibold text-navy">1. Check in at the site</h2>
@@ -315,9 +282,24 @@ export default function SubmitReportPage() {
           </section>
         )}
 
+        <div>
+          <label htmlFor="findings" className="mb-1 block text-sm font-medium text-neutral-600">
+            {isAgent ? "2. " : ""}Findings — plain language, exactly what you saw
+          </label>
+          <textarea
+            id="findings"
+            required
+            rows={5}
+            value={findings}
+            onChange={(e) => setFindings(e.target.value)}
+            placeholder="e.g. Visited the site at [address]. Foundation is complete and matches the approved plan. Spoke with the site foreman, [name]. No discrepancies found."
+            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
+          />
+        </div>
+
         <section aria-labelledby="capture-h" className="rounded border border-line p-4">
           <h2 id="capture-h" className="mb-1 text-sm font-semibold text-navy">
-            {isAgent ? "2. " : ""}Photos and video
+            {isAgent ? "3. " : ""}Photos and video
           </h2>
           {isAgent && (
             <p className={`mb-3 text-xs ${needMore > 0 ? "text-stamp" : "text-verified"}`}>
@@ -369,6 +351,24 @@ export default function SubmitReportPage() {
             </ul>
           )}
         </section>
+
+        <div>
+          <label htmlFor="status-flag" className="mb-1 block text-sm font-medium text-neutral-600">
+            {isAgent ? "4. " : ""}Status
+          </label>
+          <select
+            id="status-flag"
+            value={statusFlag}
+            onChange={(e) => setStatusFlag(e.target.value as ReportStatusFlag)}
+            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
+          >
+            {Object.entries(REPORT_FLAG_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {profile?.role === "professional" && (
           <div className="rounded border border-line bg-paper/60 p-3">
