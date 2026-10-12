@@ -8,6 +8,7 @@ import { CASE_TYPE_LABELS, INTAKE_PROCESS_LABELS } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
 import BackLink from "@/components/BackLink";
 import Link from "next/link";
+import CallChecklist from "@/components/admin/CallChecklist";
 import { MAX_VISITS, buildVisitQuote, fieldCostNgn, isVisitService, type VisitZone } from "@/lib/visitPricing";
 
 const FIELD = "w-full rounded border border-line bg-paper px-3 py-2 text-sm";
@@ -239,6 +240,8 @@ export default function LeadDetailPage() {
           )}
         </div>
       </Card>
+
+      <CallChecklist leadId={lead.id} />
 
       <Card title="What we learned on the call (private)">
         <div className="space-y-3">
