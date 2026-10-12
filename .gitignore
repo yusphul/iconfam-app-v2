@@ -8,3 +8,4 @@ node_modules
 /test-results
 /playwright-report
 tests/setup/seed-data.json
+*.tsbuildinfo
