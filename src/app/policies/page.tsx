@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import ContactEmail from "@/components/ContactEmail";
 import Logo from "@/components/Logo";
+
+export const metadata: Metadata = {
+  title: "Policies, privacy and terms",
+  description: "How iConfam works, what we do and don't do, how we handle your data, and our terms of use.",
+};
 
 const FAQS = [
   {
@@ -54,7 +61,7 @@ export default function PoliciesPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="font-display text-3xl font-semibold">Policies &amp; FAQs</h1>
+        <h1 className="font-display text-3xl font-semibold">Policies, privacy &amp; FAQs</h1>
         <p className="mt-3 max-w-xl text-base text-slateSoft">
           How iConfam works, what we do and don&apos;t do, and answers to the
           questions we hear most often.
@@ -92,6 +99,63 @@ export default function PoliciesPage() {
           </p>
         </section>
 
+        <section id="privacy" className="mt-12 scroll-mt-24">
+          <h2 className="font-display text-xl font-semibold">Privacy</h2>
+          <div className="mt-3 max-w-2xl space-y-3 text-sm leading-relaxed text-slateSoft">
+            <p>
+              <span className="font-medium text-chalk">What we collect.</span> The details you give us when you
+              request a verification or create an account: your name, email, phone or WhatsApp number, and what
+              you want checked. During a verification our team may add site photos, videos and the GPS position
+              of the visit, written findings, and, only when unavoidable, a photo or scan of a document.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">Who can see it.</span> You, the iConfam admin team, and
+              only the field agent and professionals assigned to your case. Nothing a team member submits reaches
+              you until an admin has reviewed it. Clients never see each other&apos;s cases.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">Advertising cookies.</span> If you allow them, Meta and
+              Google cookies tell us which ads brought a visitor to this website, so we can see what works.
+              They run only on the public pages, never inside your signed-in area, and never see your documents
+              or case details. If you choose &ldquo;No thanks&rdquo;, they are not loaded.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">Services that process your data for us.</span> Our hosting,
+              database, email and, where you pay by card, payment providers. We do not sell your data.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">Your choices.</span> Ask us to see, correct or delete your
+              information by emailing <ContactEmail className="font-medium text-survey hover:underline" />.
+              Uploaded documents are deleted automatically 90 days after upload.
+            </p>
+          </div>
+        </section>
+
+        <section id="terms" className="mt-10 scroll-mt-24">
+          <h2 className="font-display text-xl font-semibold">Terms of use</h2>
+          <div className="mt-3 max-w-2xl space-y-3 text-sm leading-relaxed text-slateSoft">
+            <p>
+              <span className="font-medium text-chalk">What you are buying.</span> An independent check and a
+              written report. iConfam does not guarantee a particular result, and the report is not legal,
+              financial or investment advice. The decision to buy, build, pay or walk away is always yours.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">What we need from you.</span> Accurate information about
+              the property, build or farm, and the access or contacts our team needs to do the check.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">Fees and refunds.</span> As described above: a fee agreed
+              with you before work starts, a full refund if we cannot complete a check you have paid for, and no
+              refund simply because the finding was not the one you hoped for.
+            </p>
+            <p>
+              <span className="font-medium text-chalk">Limits.</span> We check what can be verified from official
+              records and the site at the time of the visit. Conditions can change after our report, and a check
+              cannot rule out every risk.
+            </p>
+          </div>
+        </section>
+
         <section className="mt-12">
           <h2 className="font-display text-xl font-semibold">Frequently asked questions</h2>
           <div className="mt-4 divide-y divide-blueprintLine">
@@ -110,10 +174,7 @@ export default function PoliciesPage() {
         </section>
 
         <p className="mt-16 text-xs text-slateSoft">
-          This page describes how iConfam is designed to operate. It is not a
-          substitute for formal terms of service or a privacy policy reviewed
-          by a lawyer — have both drafted properly before this page is relied
-          on as a binding agreement with real clients.
+          These are plain-language summaries of how iConfam operates. Last updated October 2026.
         </p>
       </main>
     </div>

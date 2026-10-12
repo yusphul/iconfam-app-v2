@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -177,6 +178,7 @@ function Picker({
       }
       return;
     }
+    track("call_booked", { minutes });
     onBooked();
   }
 

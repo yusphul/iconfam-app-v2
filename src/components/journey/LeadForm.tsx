@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { CaseType } from "@/lib/types";
@@ -31,6 +32,7 @@ export default function LeadForm({
   const [details, setDetails] = useState("");
   const [company, setCompany] = useState(""); // honeypot
   const [busy, setBusy] = useState(false);
+  const startedTracked = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -64,6 +66,7 @@ export default function LeadForm({
         setBusy(false);
         return;
       }
+      track("request_submitted", { service });
       router.push(`/book/${json.token}`);
     } catch {
       setError("We couldn't reach the server. Check your connection and try again.");
@@ -72,7 +75,16 @@ export default function LeadForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-8">
+    <form
+      onSubmit={submit}
+      onFocusCapture={() => {
+        if (!startedTracked.current) {
+          startedTracked.current = true;
+          track("request_started", { service });
+        }
+      }}
+      className="space-y-8"
+    >
       <ServicePicker value={service} onChange={setService} />
 
       <div className="space-y-5 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">

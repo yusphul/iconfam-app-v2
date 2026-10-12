@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Manrope } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthProvider";
+import Analytics from "@/components/Analytics";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -14,9 +15,32 @@ const manrope = Manrope({
   variable: "--font-body",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.iconfam.com";
+
 export const metadata: Metadata = {
-  title: "iConfam",
-  description: "Independent verification before your money moves.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "iConfam | Independent verification before your money moves",
+    template: "%s | iConfam",
+  },
+  description:
+    "Sending money home for a house, a build or a farm? iConfam sends a vetted field agent and licensed professionals to check the paperwork and the site, and you get a plain report before you pay.",
+  applicationName: "iConfam",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "iConfam",
+    url: "/",
+    title: "Before you send that money home, confam am.",
+    description:
+      "Independent property, build and farm verification in Nigeria for the diaspora. We check the paperwork and the site before you pay.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Before you send that money home, confam am.",
+    description:
+      "Independent property, build and farm verification in Nigeria for the diaspora.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${spaceGrotesk.variable} ${manrope.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

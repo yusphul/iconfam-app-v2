@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
@@ -60,6 +61,25 @@ const HOW_IT_WORKS = [
     title: "Proceed with confidence",
     body: "Approve the next payment or milestone, knowing exactly what's real on the ground.",
     icon: "M20 6L9 17l-5-5",
+  },
+];
+
+const TRUST = [
+  {
+    title: "Paid by us, never by the other side",
+    body: "Our field agents and professionals are paid only by iConfam, never by the seller, builder or farm operator they are checking.",
+  },
+  {
+    title: "Visits you can check",
+    body: "Agents check in at the site by GPS and take live photos and video there. We review every report before it reaches you.",
+  },
+  {
+    title: "Records checked at the source",
+    body: "Licensed lawyers and surveyors check title and plans against the official registry, so you rarely need to upload documents.",
+  },
+  {
+    title: "No conflict of interest",
+    body: "We don't buy, sell, build or invest, and we never hold your money. You pay us only for the check.",
   },
 ];
 
@@ -203,6 +223,7 @@ export default function RoleGateway() {
           <nav className="hidden items-center gap-8 sm:flex">
             <NavLink href="#what-we-do">What we do</NavLink>
             <NavLink href="#how-it-works">How it works</NavLink>
+            <NavLink href="#trust">Why trust us</NavLink>
             <NavLink href="#testimonials">Testimonials</NavLink>
             <NavLink href="#contact">Contact us</NavLink>
           </nav>
@@ -464,6 +485,34 @@ export default function RoleGateway() {
         </Reveal>
       </section>
 
+      {/* Trust — answers the objections people raised most while we were validating */}
+      <section id="trust" className="border-t border-blueprintLine bg-sectionTint/50">
+        <Reveal className="mx-auto max-w-5xl px-6 py-12">
+          <h2 className="font-display text-2xl font-semibold">Why you can rely on what we tell you</h2>
+          <p className="mt-2 max-w-xl text-sm text-slateSoft">
+            Sending money to Nigeria means trusting people you can&apos;t see. Here is how we keep our own
+            people honest.
+          </p>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2">
+            {TRUST.map((t) => (
+              <div
+                key={t.title}
+                className="rounded-2xl border border-blueprintLine bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <h3 className="font-display text-base font-semibold">{t.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slateSoft">{t.body}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-sm font-medium text-chalk">
+            We do not buy, sell, build, or invest in property, farms or agribusiness, and we never hold your money.{" "}
+            <Link href="/policies" className="text-survey underline-offset-2 hover:underline">
+              Read our policies
+            </Link>
+          </p>
+        </Reveal>
+      </section>
+
       {/* Testimonials — an auto-scrolling marquee. The row is the testimonials
           rendered twice back to back; the animation translates it by exactly
           -50%, which is exactly one full set, so the loop is seamless — the
@@ -522,6 +571,7 @@ export default function RoleGateway() {
                 />
                 <a
                   href="https://wa.me/12816704862"
+                onClick={() => track("whatsapp_click")}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex w-fit rounded-full border border-blueprintLine bg-white px-5 py-2.5 text-sm font-medium text-chalk transition-colors duration-200 hover:border-survey"
@@ -618,6 +668,7 @@ export default function RoleGateway() {
                 <li className="flex items-center gap-2">
                   <a
                     href="https://wa.me/12816704862"
+                onClick={() => track("whatsapp_click")}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-2 transition-colors duration-200 hover:text-survey"

@@ -1,45 +1,15 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/AuthProvider";
 import RoleGateway from "@/components/RoleGateway";
+import HomeRedirect from "@/components/HomeRedirect";
 
-const ROLE_HOME: Record<string, string> = {
-  admin: "/admin",
-  agent: "/agent",
-  professional: "/agent",
-  client: "/portal",
-};
-
+// The public home page is rendered on the server, so visitors (and search engines
+// and ad reviewers) get the full page straight away instead of a "Loading…" screen
+// while sign-in is checked. Signed-in people are sent to their workspace by
+// <HomeRedirect />, which renders nothing for everyone else.
 export default function Home() {
-  const { session, profile, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (loading) return;
-    if (session && profile) {
-      router.replace(ROLE_HOME[profile.role] ?? "/login");
-    }
-  }, [loading, session, profile, router]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-blueprint text-sm text-slateSoft">
-        Loading…
-      </div>
-    );
-  }
-
-  // Signed-in visitors are redirected above; everyone else sees the role gateway
-  // instead of being bounced straight to a bare login form.
-  if (!session) {
-    return <RoleGateway />;
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-blueprint text-sm text-slateSoft">
-      Taking you to your workspace…
-    </div>
+    <>
+      <HomeRedirect />
+      <RoleGateway />
+    </>
   );
 }
