@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Manrope } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthProvider";
 import Analytics from "@/components/Analytics";
@@ -14,6 +14,14 @@ const manrope = Manrope({
   weight: ["400", "500", "600", "700"],
   variable: "--font-body",
 });
+
+// The site only has a light design. Declaring that stops phone browsers (Samsung Internet,
+// Chrome "dark mode for web pages") from auto-darkening it, which turned the logo and
+// orange buttons into muddy dark shades.
+export const viewport: Viewport = {
+  colorScheme: "only light",
+  themeColor: "#FBFCFD",
+};
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.iconfam.com";
 
