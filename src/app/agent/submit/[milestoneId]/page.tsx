@@ -235,12 +235,12 @@ export default function SubmitReportPage() {
 
   if (done) {
     return (
-      <div className="rounded-lg border border-line bg-white p-6 text-center">
+      <div className="rise-in rounded-2xl border border-line bg-white p-8 text-center shadow-sm">
         <p className="mb-4 text-verified">Report submitted — an admin will review it before it's
           shown to the client.</p>
         <button
           onClick={() => router.replace(milestone ? `/agent/cases/${milestone.case_id}` : "/agent")}
-          className="rounded bg-navy px-4 py-2 text-sm font-medium text-white"
+          className="btn-navy"
         >
           Back to my cases
         </button>
@@ -254,7 +254,7 @@ export default function SubmitReportPage() {
     return (
       <div>
         <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>
-        <h1 className="mb-1 font-display text-xl font-bold text-navy">Submit Report</h1>
+        <h1 className="mb-1 font-display text-2xl font-bold text-navy">Submit Report</h1>
         <p role="status" className="rounded border border-line bg-paper px-3 py-2 text-sm text-neutral-700">
           You already sent a report for &ldquo;{milestone.name}&rdquo;. It is with the admin team for review. You can
           send another only if they reject it.
@@ -267,7 +267,7 @@ export default function SubmitReportPage() {
     return (
       <div>
         <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>
-        <h1 className="mb-1 font-display text-xl font-bold text-navy">Submit Report</h1>
+        <h1 className="mb-1 font-display text-2xl font-bold text-navy">Submit Report</h1>
         <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           This milestone is assigned to {milestone.assigned_label ?? "another team member"}. Only they can send a
           report for it. Message the admin team if this looks wrong.
@@ -279,12 +279,12 @@ export default function SubmitReportPage() {
   return (
     <div>
       <BackLink href={`/agent/cases/${milestone.case_id}`}>Back to case</BackLink>
-      <h1 className="mb-1 font-display text-xl font-bold text-navy">Submit Report</h1>
+      <h1 className="mb-1 font-display text-2xl font-bold text-navy">Submit Report</h1>
       <p className="mb-6 text-sm text-neutral-500">Milestone: {milestone.name}</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-line bg-white p-6">
+      <form onSubmit={handleSubmit} className="rise-in space-y-5 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
         {isAgent && (
-          <section aria-labelledby="checkin-h" className="rounded border border-line bg-paper/60 p-4">
+          <section aria-labelledby="checkin-h" className="rounded-xl border border-line bg-paper/70 p-4 transition hover:border-stamp/30">
             <h2 id="checkin-h" className="mb-1 text-sm font-semibold text-navy">1. Check in at the site</h2>
             <p className="mb-3 text-xs text-neutral-500">
               The camera stays locked until we confirm your phone is at the property or farm.
@@ -296,7 +296,7 @@ export default function SubmitReportPage() {
             ) : (
               <>
                 <button type="button" onClick={runCheckIn} disabled={checking}
-                  className="rounded bg-navy px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+                  className="btn-navy">
                   {checking ? "Checking your location…" : checkIn ? "Check in again" : "Check in at the site"}
                 </button>
                 {checkIn && !checkIn.verified && (
@@ -321,11 +321,11 @@ export default function SubmitReportPage() {
             value={findings}
             onChange={(e) => setFindings(e.target.value)}
             placeholder="e.g. Visited the site at [address]. Foundation is complete and matches the approved plan. Spoke with the site foreman, [name]. No discrepancies found."
-            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
+            className="field-fx w-full"
           />
         </div>
 
-        <section aria-labelledby="capture-h" className="rounded border border-line p-4">
+        <section aria-labelledby="capture-h" className="rounded-xl border border-line p-4 transition hover:border-stamp/30">
           <h2 id="capture-h" className="mb-1 text-sm font-semibold text-navy">
             {isAgent ? "3. " : ""}Photos and video
           </h2>
@@ -342,15 +342,15 @@ export default function SubmitReportPage() {
           )}
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={!unlocked} onClick={() => setCameraOpen(true)}
-              className="rounded bg-stamp px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+              className="btn-primary">
               Open camera
             </button>
-            <label className={`rounded border border-line px-4 py-2 text-sm ${unlocked ? "cursor-pointer hover:border-stamp" : "cursor-not-allowed opacity-40"}`}>
+            <label className={`rounded-lg border border-line px-4 py-2 text-sm font-semibold transition duration-150 active:scale-95 ${unlocked ? "cursor-pointer hover:border-stamp hover:bg-stamp/5" : "cursor-not-allowed opacity-40"}`}>
               Use phone camera app
               <input type="file" accept="image/*,video/*" capture="environment" disabled={!unlocked}
                 onChange={onDeviceCamera} className="sr-only" />
             </label>
-            <label className={`rounded border border-line px-4 py-2 text-sm ${unlocked ? "cursor-pointer hover:border-stamp" : "cursor-not-allowed opacity-40"}`}>
+            <label className={`rounded-lg border border-line px-4 py-2 text-sm font-semibold transition duration-150 active:scale-95 ${unlocked ? "cursor-pointer hover:border-stamp hover:bg-stamp/5" : "cursor-not-allowed opacity-40"}`}>
               Add from gallery
               <input type="file" accept="image/*,video/*" multiple disabled={!unlocked}
                 onChange={onGallery} aria-label="Add photos or videos from gallery" className="sr-only" />
@@ -362,7 +362,7 @@ export default function SubmitReportPage() {
           {items.length > 0 && (
             <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="Selected photos and videos">
               {items.map((it) => (
-                <li key={it.id} className="relative overflow-hidden rounded border border-line bg-black/5">
+                <li key={it.id} className="relative overflow-hidden rounded-lg border border-line bg-black/5 fade-in">
                   {it.kind === "video" ? (
                     <video src={it.preview} muted playsInline className="h-24 w-full object-cover" />
                   ) : (
@@ -388,7 +388,7 @@ export default function SubmitReportPage() {
             id="status-flag"
             value={statusFlag}
             onChange={(e) => setStatusFlag(e.target.value as ReportStatusFlag)}
-            className="w-full rounded border border-line bg-paper px-3 py-2 text-sm"
+            className="field-fx w-full"
           >
             {Object.entries(REPORT_FLAG_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -410,14 +410,14 @@ export default function SubmitReportPage() {
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
               placeholder="What is it? e.g. Certificate of Occupancy, survey plan"
-              className="mb-2 w-full rounded border border-line bg-white px-3 py-2 text-sm"
+              className="field-fx mb-2 w-full"
             />
             <input
               type="file"
               aria-label="Document file"
               accept="image/*,application/pdf"
               onChange={(e) => setDocumentFile(e.target.files?.[0] ?? null)}
-              className="w-full rounded border border-line bg-white px-3 py-2 text-sm"
+              className="field-fx w-full"
             />
             <p className="mt-1 text-xs text-neutral-400">
               Photo or scan only, never the original. Automatically deleted 90 days
@@ -431,7 +431,7 @@ export default function SubmitReportPage() {
         <button
           type="submit"
           disabled={submitting || !unlocked}
-          className="w-full rounded bg-stamp py-2.5 text-sm font-semibold text-white hover:bg-stampDark disabled:opacity-60"
+          className="btn-primary w-full !py-3"
         >
           {submitting ? "Submitting…" : "Submit Report"}
         </button>

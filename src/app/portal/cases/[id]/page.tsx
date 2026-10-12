@@ -297,7 +297,7 @@ export default function ClientCaseDetail() {
             <BackLink href="/portal" tone="light">
               My cases
             </BackLink>
-            <StatusBadge kind="case" value={caseRow.status} variant="glass" />
+            <StatusBadge kind="case" value={caseRow.client_status} variant="glass" />
           </div>
 
           <div className="mt-8 flex flex-wrap items-end justify-between gap-6 sm:mt-14">
@@ -319,7 +319,7 @@ export default function ClientCaseDetail() {
                   type="button"
                   onClick={downloadPdf}
                   disabled={pdfBusy}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-navy shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-70"
+                  className="btn inline-flex items-center gap-2 !rounded-full bg-white !px-5 !py-2.5 text-navy shadow-sm hover:-translate-y-px hover:bg-white/90 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-70"
                 >
                   <DownloadIcon size={16} />
                   {pdfBusy ? "Preparing PDF…" : "Download report (PDF)"}
@@ -396,7 +396,7 @@ export default function ClientCaseDetail() {
                 onClick={() =>
                   setOpenSteps(allOpen ? new Set() : new Set(milestones.map((m) => m.id)))
                 }
-                className="shrink-0 rounded text-sm font-medium text-stamp hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+                className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-stamp transition duration-150 hover:bg-stamp/10 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
               >
                 {allOpen ? "Collapse all" : "Expand all"}
               </button>
@@ -536,7 +536,7 @@ export default function ClientCaseDetail() {
                       href={documentUrls[doc.id]}
                       target="_blank"
                       rel="noreferrer"
-                      className="shrink-0 rounded text-sm font-medium text-stamp hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+                      className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-stamp transition duration-150 hover:bg-stamp/10 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
                     >
                       View
                     </a>
@@ -804,7 +804,7 @@ function DepositBanner({
         <button
           type="button"
           onClick={onPay}
-          className="rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+          className="btn-primary !rounded-full !px-5 !py-2.5"
         >
           {full ? "Pay now" : "Pay deposit"}
         </button>
@@ -813,11 +813,32 @@ function DepositBanner({
   );
 }
 
-function SideCard({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
+function SideCard({
+  title,
+  id,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  id?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <section id={id} className="scroll-mt-24 rounded-2xl border border-line bg-white p-5 shadow-sm">
-      <h2 className="mb-3 font-display text-lg font-semibold text-navy">{title}</h2>
-      {children}
+    <section id={id} className="card-lift scroll-mt-24 rounded-2xl border border-line bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2.5 rounded-2xl px-5 py-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-stamp"
+      >
+        <Chevron open={open} />
+        <h2 className="font-display text-lg font-semibold text-navy">{title}</h2>
+      </button>
+      <Disclosure open={open}>
+        <div className="px-5 pb-5">{children}</div>
+      </Disclosure>
     </section>
   );
 }

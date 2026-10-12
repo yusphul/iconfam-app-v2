@@ -96,7 +96,7 @@ export default function ClientCasesPage() {
   if (loading) return <HomeSkeleton />;
 
   const activeCount = cases.filter(
-    (c) => c.status !== "closed" && c.status !== "report_delivered"
+    (c) => c.client_status !== "closed" && c.client_status !== "report_delivered"
   ).length;
   const verified = steps.filter((s) => s.status === "confirmed").length;
   const issues = steps.filter((s) => s.status === "issue_found").length;
@@ -113,7 +113,7 @@ export default function ClientCasesPage() {
 
   return (
     <div className="space-y-8">
-      <section className="flex flex-wrap items-end justify-between gap-5">
+      <section className="rise-in flex flex-wrap items-end justify-between gap-5">
         <div className="max-w-xl">
           <h1 className="font-display text-3xl font-bold tracking-tight text-navy sm:text-4xl">
             {greeting()}
@@ -123,7 +123,7 @@ export default function ClientCasesPage() {
         </div>
         <Link
           href="/portal/new"
-          className="inline-flex items-center gap-2 rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stampDark hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+          className="btn-primary !rounded-full !px-5 !py-2.5"
         >
           <PlusIcon size={16} />
           Request verification
@@ -131,7 +131,7 @@ export default function ClientCasesPage() {
       </section>
 
       {cases.length > 0 && (
-        <section aria-label="Your verification at a glance">
+        <section aria-label="Your verification at a glance" className="rise-in" style={{ animationDelay: "60ms" }}>
           {/* One joined strip rather than four separate cards: hairlines come
               from a 1px gap over a tinted background. */}
           <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-sm sm:grid-cols-4">
@@ -164,8 +164,8 @@ export default function ClientCasesPage() {
             <span className="ml-2 text-base font-medium text-neutral-400">{requests.length}</span>
           </h2>
           <ul className="grid gap-4 md:grid-cols-2">
-            {requests.map((l) => (
-              <li key={l.id}>
+            {requests.map((l, i) => (
+              <li key={l.id} className="rise-in" style={{ animationDelay: `${i * 60}ms` }}>
                 <RequestCard lead={l} />
               </li>
             ))}
@@ -180,8 +180,8 @@ export default function ClientCasesPage() {
             <span className="ml-2 text-base font-medium text-neutral-400">{cases.length}</span>
           </h2>
           <ul className="grid gap-5 md:grid-cols-2">
-            {cases.map((c) => (
-              <li key={c.id}>
+            {cases.map((c, i) => (
+              <li key={c.id} className="rise-in" style={{ animationDelay: `${80 + i * 70}ms` }}>
                 <CaseTile
                   c={c}
                   steps={stepsByCase[c.id] ?? []}
@@ -210,7 +210,7 @@ function RequestCard({ lead }: { lead: Lead }) {
       })
     : null;
   return (
-    <article className="flex gap-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
+    <article className="card-lift flex gap-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
       <div className="relative hidden h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-footerBg sm:block">
         <Illustration kind={lead.service} className="absolute inset-0 h-full w-full" />
       </div>
@@ -222,7 +222,7 @@ function RequestCard({ lead }: { lead: Lead }) {
             <p className="mt-1 text-sm text-neutral-600">Next step: pick a time for a short call.</p>
             <Link
               href={`/book/${lead.token}`}
-              className="mt-2 inline-flex items-center rounded-full bg-stamp px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+              className="btn-primary btn-sm mt-2 !rounded-full !px-4 !py-1.5 !text-sm"
             >
               Book your call
             </Link>
@@ -263,7 +263,7 @@ function Stat({
   tone?: "calm" | "alert";
 }) {
   return (
-    <div className="bg-white px-5 py-4">
+    <div className="bg-white px-5 py-4 transition-colors duration-200 hover:bg-paper">
       <dt className="text-sm text-neutral-500">{label}</dt>
       <dd className="mt-1 flex items-baseline gap-2">
         <span
@@ -281,7 +281,7 @@ function Stat({
       {meter !== undefined && (
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
           <div
-            className="h-full rounded-full bg-verified"
+            className="h-full rounded-full bg-verified transition-all duration-700 ease-out"
             style={{ width: `${Math.round(meter * 100)}%` }}
           />
         </div>
@@ -314,7 +314,7 @@ function CaseTile({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-footerBg/60 to-transparent" />
         <div className="absolute left-4 top-4">
-          <StatusBadge kind="case" value={c.status} variant="glass" />
+          <StatusBadge kind="case" value={c.client_status} variant="glass" />
         </div>
         <p className="absolute bottom-3 left-4 text-sm font-medium text-white/90">
           {CASE_TYPE_LABELS[c.case_type]}
@@ -391,7 +391,7 @@ function EmptyState() {
         <div>
           <Link
             href="/portal/new"
-            className="inline-flex items-center gap-2 rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stampDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+            className="btn-primary !rounded-full !px-5 !py-2.5"
           >
             <PlusIcon size={16} />
             Request verification

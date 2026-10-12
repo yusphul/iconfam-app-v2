@@ -8,23 +8,38 @@ import Logo from "@/components/Logo";
 
 export default function AgentLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
+  const initial = (profile?.full_name ?? "?").trim().charAt(0).toUpperCase();
   return (
     <RequireRole allow={["agent", "professional"]}>
-      <div className="min-h-screen bg-paper font-body">
-        <header className="border-b border-line bg-white px-6 py-4">
-          <div className="mx-auto flex max-w-2xl items-center justify-between">
-            <Link href="/agent" className="flex items-center gap-2" aria-label="Back to my cases">
+      <div className="min-h-screen bg-gradient-to-b from-sectionTint/70 via-paper to-paper font-body">
+        <header className="sticky top-0 z-30 border-b border-line bg-white/85 px-4 py-3 backdrop-blur-md sm:px-6">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            <Link
+              href="/agent"
+              className="flex items-center gap-2.5 rounded-lg transition active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stamp"
+              aria-label="Back to my cases"
+            >
               <Logo height={26} />
-              <span className="text-xs uppercase tracking-wide text-neutral-400">
-                {profile ? roleLabel(profile) : ""}
-              </span>
+              {profile && (
+                <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-xs font-semibold text-stampDark">
+                  {roleLabel(profile)}
+                </span>
+              )}
             </Link>
-            <button onClick={signOut} className="text-sm text-stamp hover:underline">
-              Sign out
-            </button>
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white"
+              >
+                {initial}
+              </span>
+              <button onClick={signOut} className="btn-outline btn-sm">
+                Sign out
+              </button>
+            </div>
           </div>
         </header>
-        <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8">{children}</main>
       </div>
     </RequireRole>
   );

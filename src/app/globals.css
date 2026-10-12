@@ -111,3 +111,36 @@ body {
   .ping-ring { animation: none; opacity: 0.15; }
   .marquee-track { animation: none; }
 }
+
+/* Shared interaction layer for the agent, professional and client portals.
+   Buttons press in, cards lift on hover, form controls glow on focus. All of it is
+   switched off for people who ask for reduced motion. */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold
+      transition duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+      focus-visible:outline-stamp disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn:not(:disabled):active { transform: scale(0.96); }
+  .btn-primary {
+    @apply btn bg-stamp text-white shadow-sm shadow-stamp/30 hover:bg-stampDark hover:shadow-md hover:shadow-stamp/30;
+  }
+  .btn-primary:not(:disabled):hover { transform: translateY(-1px); }
+  .btn-primary:not(:disabled):active { transform: scale(0.96); }
+  .btn-navy { @apply btn bg-navy text-white hover:bg-navy/90 hover:shadow-md; }
+  .btn-outline { @apply btn border border-line bg-white text-navy hover:border-stamp/50 hover:bg-stamp/5 hover:text-stampDark; }
+  .btn-sm { @apply px-2.5 py-1.5 text-xs; }
+  .field-fx {
+    @apply rounded-lg border border-line bg-white px-3 py-2 text-sm text-navy transition duration-150
+      hover:border-neutral-300 focus:border-stamp focus:outline-none focus:ring-4 focus:ring-stamp/15 disabled:opacity-60;
+  }
+  .card-lift { @apply transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/5; }
+  .rise-in { animation: riseIn 0.45s ease-out both; }
+  .fade-in { animation: pageFadeIn 0.3s ease-out both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn-primary, .field-fx, .card-lift { transition: none; }
+  .btn:not(:disabled):active, .btn-primary:not(:disabled):active, .btn-primary:not(:disabled):hover { transform: none; }
+  .card-lift:hover { transform: none; }
+  .rise-in, .fade-in { animation: none; }
+}

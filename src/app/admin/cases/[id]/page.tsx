@@ -287,6 +287,9 @@ export default function AdminCaseDetail() {
     }
   }
 
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   const updateStatus = (status: CaseStatus) =>
     run(supabase.from("cases").update({ status }).eq("id", id));
 
@@ -479,6 +482,21 @@ export default function AdminCaseDetail() {
                 onChange={(v) => updateStatus(v as CaseStatus)}
                 options={Object.entries(CASE_STATUS_LABELS)}
               />
+              {caseRow.client_status !== caseRow.status && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 sm:col-span-2">
+                  <p>
+                    The client still sees <strong>{CASE_STATUS_LABELS[caseRow.client_status]}</strong>. The team set the
+                    working status to <strong>{CASE_STATUS_LABELS[caseRow.status]}</strong>; the client only sees what you set.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => run(supabase.from("cases").update({ client_status: caseRow.status }).eq("id", id))}
+                    className="mt-2 rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-navy/90 active:scale-95"
+                  >
+                    Show client "{CASE_STATUS_LABELS[caseRow.status]}"
+                  </button>
+                </div>
+              )}
               <LabeledSelect
                 label="Field agent"
                 value={caseRow.assigned_agent_id ?? ""}
@@ -643,7 +661,41 @@ export default function AdminCaseDetail() {
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-paper text-xs font-semibold text-neutral-500 ring-1 ring-line">
                           {i + 1}
                         </span>
-                        <span className="font-medium text-navy">{m.name}</span>
+                        {renamingId === m.id ? (
+                          <form
+                            className="flex items-center gap-1"
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              const name = renameValue.trim();
+                              if (name && name !== m.name) await run(supabase.from("milestones").update({ name }).eq("id", m.id));
+                              setRenamingId(null);
+                            }}
+                          >
+                            <input
+                              autoFocus
+                              aria-label="Milestone title"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => e.key === "Escape" && setRenamingId(null)}
+                              className="w-56 rounded border border-line px-2 py-1 text-sm"
+                            />
+                            <button type="submit" className="rounded bg-navy px-2 py-1 text-xs font-semibold text-white transition active:scale-95">Save</button>
+                            <button type="button" onClick={() => setRenamingId(null)} className="rounded border border-line px-2 py-1 text-xs transition hover:bg-paper active:scale-95">Cancel</button>
+                          </form>
+                        ) : (
+                          <>
+                            <span className="font-medium text-navy">{m.name}</span>
+                            <button
+                              type="button"
+                              aria-label={`Rename ${m.name}`}
+                              title="Rename"
+                              onClick={() => { setRenamingId(m.id); setRenameValue(m.name); }}
+                              className="rounded p-1 text-neutral-400 transition hover:bg-paper hover:text-navy active:scale-90"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                            </button>
+                          </>
+                        )}
                         {m.owner_label && <span className={LABEL_CHIP}>{m.owner_label}</span>}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">

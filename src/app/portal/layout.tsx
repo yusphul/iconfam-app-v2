@@ -15,7 +15,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const onNew = pathname === "/portal/new";
 
   const navLink = (active: boolean) =>
-    `rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp ${
+    `rounded-full px-3.5 py-1.5 text-sm font-medium transition duration-150 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp ${
       active ? "bg-navy text-white" : "text-neutral-600 hover:bg-slate-100 hover:text-navy"
     }`;
 
@@ -53,7 +53,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </span>
               <button
                 onClick={signOut}
-                className="rounded text-stamp hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+                className="btn-outline btn-sm"
               >
                 Sign out
               </button>

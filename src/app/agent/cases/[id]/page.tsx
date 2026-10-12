@@ -1,6 +1,8 @@
 "use client";
 
 import { useSiteCheckRequired } from "@/lib/useSiteCheckRequired";
+import CollapsibleSection, { Chevron } from "@/components/CollapsibleSection";
+import Disclosure from "@/components/portal/Disclosure";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -142,11 +144,11 @@ export default function AgentCaseDetail() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="rise-in rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-5">
         <BackLink href="/agent">My cases</BackLink>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-xl font-bold text-navy">{caseRow.title}</h1>
+            <h1 className="font-display text-2xl font-bold text-navy">{caseRow.title}</h1>
             <p className="text-sm text-neutral-500">
               {CASE_TYPE_LABELS[caseRow.case_type]}
               {caseRow.location_description ? ` · ${caseRow.location_description}` : ""}
@@ -163,7 +165,7 @@ export default function AgentCaseDetail() {
                   value={caseRow.status}
                   disabled={saving === "case"}
                   onChange={(e) => changeCaseStatus(e.target.value as CaseStatus)}
-                  className="rounded border border-line bg-white px-2 py-1.5 text-sm"
+                  className="field-fx !py-1.5"
                 >
                   {!FIELD_STATUSES.includes(caseRow.status) && (
                     <option value={caseRow.status} disabled>
@@ -192,9 +194,9 @@ export default function AgentCaseDetail() {
       {needsSite && (
         <p
           role="status"
-          className={`rounded border px-3 py-2 text-sm ${
+          className={`rise-in rounded-xl border px-4 py-3 text-sm ${
             caseRow.site_lat != null
-              ? "border-line bg-paper text-neutral-600"
+              ? "border-sky-200 bg-sky-50 text-sky-900"
               : "border-amber-300 bg-amber-50 text-amber-800"
           }`}
         >
@@ -204,89 +206,20 @@ export default function AgentCaseDetail() {
         </p>
       )}
 
-      <Section title="Milestones">
+      <CollapsibleSection title="Milestones" summary={`${milestones.filter((m) => m.status === "confirmed").length} of ${milestones.length} confirmed`}>
         <ol className="space-y-3">
-          {milestones.map((m, i) => {
-            const mine = (reportsByMilestone[m.id] ?? []).filter(
-              (r) => r.submitted_by === profile.id
-            );
-            return (
-              <li
-                key={m.id}
-                className={`rounded-lg border border-l-4 border-line bg-white ${statusStyle("milestone", m.status).accent}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-paper text-xs font-semibold text-neutral-500 ring-1 ring-line">
-                      {i + 1}
-                    </span>
-                    <span className="font-medium text-navy">{m.name}</span>
-                    {m.owner_label && <span className={LABEL_CHIP}>{m.owner_label}</span>}
-                    {assigneeChip(m, profile.id) && (
-                      <span className={m.assigned_to === profile.id ? "rounded-full bg-stamp/10 px-2 py-0.5 text-[11px] font-semibold text-stampDark" : LABEL_CHIP}>
-                        {assigneeChip(m, profile.id)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!canWorkMilestone(m, profile.id) ? (
-                      <StatusBadge kind="milestone" value={m.status} />
-                    ) : (
-                    <>
-                    <select
-                      aria-label={`Status of ${m.name}`}
-                      value={m.status}
-                      disabled={saving === m.id}
-                      onChange={(e) => changeMilestoneStatus(m.id, e.target.value as MilestoneStatus)}
-                      className="rounded border border-line bg-white px-2 py-1 text-xs"
-                    >
-                      {Object.entries(MILESTONE_STATUS_LABELS).map(([k, label]) => (
-                        <option key={k} value={k}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    {canSubmitReport(mine) ? (
-                      <Link
-                        href={`/agent/submit/${m.id}`}
-                        className="rounded bg-stamp px-2 py-1 text-xs font-semibold text-white hover:bg-stampDark"
-                      >
-                        {mine.length > 0 ? "Resubmit report" : "Submit report"}
-                      </Link>
-                    ) : (
-                      <span className="text-xs font-medium text-neutral-500">Report sent</span>
-                    )}
-                    </>
-                    )}
-                  </div>
-                </div>
-
-                {mine.length > 0 && (
-                  <div className="space-y-2 border-t border-line bg-paper/60 px-4 py-3">
-                    {mine.map((r) => (
-                      <div key={r.id} className="rounded border border-line bg-white p-3 text-sm">
-                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <StatusBadge kind="report" value={r.status_flag} />
-                            <StatusBadge kind="review" value={r.review_status} />
-                          </div>
-                          <span className="text-xs text-neutral-400">{timeAgo(r.created_at)}</span>
-                        </div>
-                        <p className="text-neutral-700">{r.findings_summary}</p>
-                        <ReportMedia media={mediaByReport[r.id] ?? []} />
-                        {r.review_status === "rejected" && r.review_note && (
-                          <p className="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
-                            <span className="font-semibold">Admin feedback: </span>
-                            {r.review_note}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </li>
-            );
-          })}
+          {milestones.map((m, i) => (
+            <MilestoneItem
+              key={m.id}
+              m={m}
+              index={i}
+              profileId={profile.id}
+              mine={(reportsByMilestone[m.id] ?? []).filter((r) => r.submitted_by === profile.id)}
+              mediaByReport={mediaByReport}
+              saving={saving === m.id}
+              onStatus={(st) => changeMilestoneStatus(m.id, st)}
+            />
+          ))}
           {milestones.length === 0 && (
             <p className="text-sm text-neutral-400">No milestones yet.</p>
           )}
@@ -299,20 +232,20 @@ export default function AgentCaseDetail() {
               onChange={(e) => setNewMilestone(e.target.value)}
               aria-label="New milestone"
               placeholder="Add a milestone, e.g. Survey plan check"
-              className="flex-1 rounded border border-line bg-paper px-3 py-2 text-sm"
+              className="field-fx flex-1"
             />
             <button
               type="submit"
               disabled={adding}
-              className="rounded bg-navy px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              className="btn-navy"
             >
               Add milestone
             </button>
           </form>
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Messages to admin">
+      <CollapsibleSection title="Messages to admin" summary="private line to the iConfam team">
         <p className="mb-3 text-xs text-neutral-400">
           This is a private line to the iConfam admin team. All communication about the case goes
           through here.
@@ -325,18 +258,113 @@ export default function AgentCaseDetail() {
           placeholder="Message the admin team…"
           emptyText="No messages yet."
         />
-      </Section>
+      </CollapsibleSection>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function MilestoneItem({
+  m,
+  index,
+  profileId,
+  mine,
+  mediaByReport,
+  saving,
+  onStatus,
+}: {
+  m: Milestone;
+  index: number;
+  profileId: string;
+  mine: Report[];
+  mediaByReport: Record<string, MediaView[]>;
+  saving: boolean;
+  onStatus: (s: MilestoneStatus) => void;
+}) {
+  const needsFix = mine.some((r) => r.review_status === "rejected") && canSubmitReport(mine);
+  const [open, setOpen] = useState(needsFix);
+  const chip = assigneeChip(m, profileId);
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-        {title}
-      </h2>
-      {children}
-    </div>
+    <li className={`card-lift rounded-xl border border-l-4 border-line bg-white ${statusStyle("milestone", m.status).accent}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-paper text-xs font-semibold text-neutral-500 ring-1 ring-line">
+            {index + 1}
+          </span>
+          <span className="font-medium text-navy">{m.name}</span>
+          {m.owner_label && <span className={LABEL_CHIP}>{m.owner_label}</span>}
+          {chip && (
+            <span className={m.assigned_to === profileId ? "rounded-full bg-stamp/10 px-2 py-0.5 text-[11px] font-semibold text-stampDark" : LABEL_CHIP}>
+              {chip}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!canWorkMilestone(m, profileId) ? (
+            <StatusBadge kind="milestone" value={m.status} />
+          ) : (
+            <>
+              <select
+                aria-label={`Status of ${m.name}`}
+                value={m.status}
+                disabled={saving}
+                onChange={(e) => onStatus(e.target.value as MilestoneStatus)}
+                className="field-fx !px-2 !py-1 !text-xs"
+              >
+                {Object.entries(MILESTONE_STATUS_LABELS).map(([k, label]) => (
+                  <option key={k} value={k}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {canSubmitReport(mine) ? (
+                <Link href={`/agent/submit/${m.id}`} className="btn-primary btn-sm">
+                  {mine.length > 0 ? "Resubmit report" : "Submit report"}
+                </Link>
+              ) : (
+                <span className="text-xs font-medium text-neutral-500">Report sent</span>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {mine.length > 0 && (
+        <div className="border-t border-line">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-500 transition hover:bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stamp"
+          >
+            <Chevron open={open} />
+            {mine.length === 1 ? "Your report" : `Your reports (${mine.length})`}
+            {needsFix && <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-700 ring-1 ring-red-200">needs a fix</span>}
+          </button>
+          <Disclosure open={open}>
+            <div className="space-y-2 bg-paper/60 px-4 pb-3 pt-1">
+              {mine.map((r) => (
+                <div key={r.id} className="rounded-lg border border-line bg-white p-3 text-sm">
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge kind="report" value={r.status_flag} />
+                      <StatusBadge kind="review" value={r.review_status} />
+                    </div>
+                    <span className="text-xs text-neutral-400">{timeAgo(r.created_at)}</span>
+                  </div>
+                  <p className="text-neutral-700">{r.findings_summary}</p>
+                  <ReportMedia media={mediaByReport[r.id] ?? []} />
+                  {r.review_status === "rejected" && r.review_note && (
+                    <p className="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
+                      <span className="font-semibold">Admin feedback: </span>
+                      {r.review_note}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Disclosure>
+        </div>
+      )}
+    </li>
   );
 }

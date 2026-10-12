@@ -62,6 +62,8 @@ export interface Case {
   client_id: string;
   case_type: CaseType;
   status: CaseStatus;
+  // What the client sees. Only an admin's status change moves it.
+  client_status: CaseStatus;
   title: string;
   location_description: string | null;
   assigned_agent_id: string | null;
