@@ -46,6 +46,25 @@ export default function SettingsPage() {
   const [zones, setZones] = useState<VisitZone[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryMsg, setRetryMsg] = useState<string | null>(null);
+
+  async function retryFailed() {
+    setRetrying(true);
+    setRetryMsg(null);
+    const { data, error } = await supabase.rpc("retry_failed_emails");
+    if (error) {
+      setRetryMsg(error.message);
+      setRetrying(false);
+      return;
+    }
+    const n = Number(data) || 0;
+    // Send now instead of waiting for the next trigger.
+    await fetch("/api/notifications/process", { method: "POST" }).catch(() => {});
+    await load();
+    setRetryMsg(n === 0 ? "No failed emails from the last 3 days to retry." : `Retried ${n} failed email${n === 1 ? "" : "s"}. Check the list for the result.`);
+    setRetrying(false);
+  }
 
   async function load() {
     const [{ data: st }, { data: r }, { data: ob }, { data: z }] = await Promise.all([
@@ -258,6 +277,13 @@ export default function SettingsPage() {
           Emails the app has queued. &quot;Waiting&quot; means not sent yet: if they stay waiting, email isn&apos;t set up
           (see RESEND_API_KEY) or the provider rejected them.
         </p>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={retryFailed} disabled={retrying} className="btn btn-outline btn-sm disabled:opacity-60">
+            {retrying ? "Retrying…" : "Retry failed emails"}
+          </button>
+          <button type="button" onClick={load} className="btn btn-outline btn-sm">Refresh</button>
+          {retryMsg && <span role="status" className="text-xs text-neutral-600">{retryMsg}</span>}
+        </div>
         <ul className="divide-y divide-line text-sm">
           {outbox.map((o) => (
             <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
