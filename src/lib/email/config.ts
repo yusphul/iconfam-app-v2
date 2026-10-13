@@ -5,6 +5,8 @@
 //   EMAIL_REPLY_TO   optional, where replies go
 //   NEXT_PUBLIC_SITE_URL   e.g. https://app.iconfam.com, used for the links inside emails
 
+import { normalizeSiteUrl } from "../siteUrl";
+
 export interface EmailConfig {
   apiKey: string | null;
   from: string;
@@ -25,5 +27,5 @@ export function appUrl(fallbackOrigin?: string): string {
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
     fallbackOrigin ||
     "http://localhost:3000";
-  return raw.replace(/\/+$/, "");
+  return normalizeSiteUrl(raw, "http://localhost:3000");
 }

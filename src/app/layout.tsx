@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Manrope } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthProvider";
 import Analytics from "@/components/Analytics";
+import { normalizeSiteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -23,7 +24,7 @@ export const viewport: Viewport = {
   themeColor: "#FBFCFD",
 };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.iconfam.com";
+const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
